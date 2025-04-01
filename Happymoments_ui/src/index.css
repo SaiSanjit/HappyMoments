@@ -1,0 +1,166 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 217 53% 26%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 217 53% 26%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 217 53% 26%;
+
+    --primary: 33 100% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 217 53% 26%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 0 0% 96%;
+    --accent-foreground: 217 53% 26%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 33 100% 48%;
+    --input: 0 0% 92%;
+    --ring: 33 100% 48%;
+
+    --radius: 0.5rem;
+    
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-wedding-gray/20 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-wedding-gray/30;
+  }
+}
+
+/* Reusable components */
+@layer components {
+  .container-custom {
+    @apply container px-4 md:px-6 mx-auto max-w-7xl;
+  }
+  
+  .glass-panel {
+    @apply bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-subtle;
+  }
+  
+  .transition-custom {
+    @apply transition duration-300 ease-in-out;
+  }
+  
+  .btn-primary {
+    @apply bg-wedding-orange text-white px-6 py-3 rounded-full font-medium shadow-md 
+    hover:bg-wedding-orange-hover hover:shadow-lg transition-custom active:scale-[0.98];
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-wedding-navy px-6 py-3 rounded-full font-medium shadow-sm
+    hover:bg-wedding-navy-light transition-custom border border-gray-200 active:scale-[0.98];
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .font-logo {
+    font-family: 'Playfair Display', serif;
+  }
+}
+@font-face {
+  font-family: 'CustomFont';
+  src: url('/fonts/CustomFont.woff2') format('woff2'),
+       url('/fonts/CustomFont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+}
+
+* {
+  font-family: 'CustomFont', sans-serif;
+}
+
+    .custom-button {
+      background-color: #28a745 !important; /* Custom Green */
+      border-color: #28a745 !important;
+    }
+  /* Tab Container */
+.p-tabview-nav {
+  background-color: black !important; /* Black background */
+  color: white !important; /* White text */
+  display: flex;
+  justify-content: center; /* Center align tabs */
+  border-bottom: 2px solid #2d3748; /* Optional: subtle bottom border */
+}
+
+/* Tab Links */
+.p-tabview-nav-link {
+  background-color: black !important; 
+  color: white !important;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+  border-radius: 0.5rem;
+  border-bottom: 2px solid transparent; /* Default: no border */
+}
+
+/* Active (Selected) Tab */
+.p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background-color: black !important;
+  color: white !important;
+  border-bottom: 3px solid orange !important; /* Only for active tab */
+  font-weight: bold;
+}
+
+/* Hover Effect */
+.p-tabview-nav-link:hover {
+  background-color: #4a5568 !important; /* Dark gray on hover */
+  color:orange!important;
+}
+
+/* Tab Content */
+.p-tabview .p-tabview-panels {
+  background-color: black !important;
+  color: white !important;
+  padding: 1rem;
+}
