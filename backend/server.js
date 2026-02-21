@@ -51,8 +51,8 @@ app.use('/api/admin-notifications', adminNotificationsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     service: 'Event Vendor Email API'
   });
@@ -80,10 +80,12 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Email API Server running on port ${PORT}`);
-  console.log(`📧 Email service initialized`);
-  console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Email API Server running on port ${PORT}`);
+    console.log(`📧 Email service initialized`);
+    console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  });
+}
 
 module.exports = app;
