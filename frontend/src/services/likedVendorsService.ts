@@ -1,142 +1,156 @@
-import { supabase } from '@/lib/supabase';
+// API service for liked vendors using backend endpoints
+import { API_BASE_URL } from '../config/api';
+const LIKED_VENDORS_URL = `${API_BASE_URL}/api/liked-vendors`;
 
-export interface LikedVendor {
-  id: number;
-  customer_id: number;
-  vendor_id: string;
-  liked_at: string;
-  created_at: string;
+export interface LikedVendorResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+  error?: string;
+  liked_vendor_ids?: string[];
+  is_liked?: boolean;
+  already_liked?: boolean;
 }
 
-// Add a vendor to customer's liked list
-export const likeVendor = async (customerId: number, vendorId: string): Promise<{ success: boolean; error?: string }> => {
+// Save like vendor API call
+export const saveLikeVendor = async (customerId: number, vendorId: string): Promise<LikedVendorResponse> => {
   try {
-    const { error } = await supabase
-      .from('customer_liked_vendors')
-      .insert({
+    console.log(`🌐 API: Saving like for customer ${customerId}, vendor ${vendorId}`);
+    console.log(`🔗 API URL: ${LIKED_VENDORS_URL}/save-like`);
+
+    const response = await fetch(`${LIKED_VENDORS_URL}/save-like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         customer_id: customerId,
         vendor_id: vendorId
-      });
+      })
+    });
 
-    if (error) {
-      console.error('Error liking vendor:', error);
-      return { success: false, error: error.message };
-    }
+    console.log(`📡 Response status: ${response.status} ${response.statusText}`);
+    const data = await response.json();
+    console.log(`📦 Response data:`, data);
 
-    return { success: true };
-  } catch (error) {
-    console.error('Error:', error);
-    return { success: false, error: 'An unexpected error occurred' };
-  }
-};
-
-// Remove a vendor from customer's liked list
-export const unlikeVendor = async (customerId: number, vendorId: string): Promise<{ success: boolean; error?: string }> => {
-  try {
-    const { error } = await supabase
-      .from('customer_liked_vendors')
-      .delete()
-      .eq('customer_id', customerId)
-      .eq('vendor_id', vendorId);
-
-    if (error) {
-      console.error('Error unliking vendor:', error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error:', error);
-    return { success: false, error: 'An unexpected error occurred' };
-  }
-};
-
-// Check if a vendor is liked by a customer
-export const isVendorLiked = async (customerId: number, vendorId: string): Promise<{ liked: boolean; error?: string }> => {
-  try {
-    const { data, error } = await supabase
-      .from('customer_liked_vendors')
-      .select('id')
-      .eq('customer_id', customerId)
-      .eq('vendor_id', vendorId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error checking if vendor is liked:', error);
-      return { liked: false, error: error.message };
-    }
-
-    return { liked: !!data };
-  } catch (error) {
-    console.error('Error:', error);
-    return { liked: false, error: 'An unexpected error occurred' };
-  }
-};
-
-// Get all liked vendors for a customer
-export const getLikedVendors = async (customerId: number): Promise<{ data?: LikedVendor[]; error?: string }> => {
-  try {
-    const { data, error } = await supabase
-      .from('customer_liked_vendors')
-      .select('*')
-      .eq('customer_id', customerId)
-      .order('liked_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching liked vendors:', error);
-      return { error: error.message };
-    }
-
-    return { data: data || [] };
-  } catch (error) {
-    console.error('Error:', error);
-    return { error: 'An unexpected error occurred' };
-  }
-};
-
-// Get liked vendors with vendor details
-export const getLikedVendorsWithDetails = async (customerId: number): Promise<{ data?: any[]; error?: string }> => {
-  try {
-    // First, get the liked vendor IDs
-    const { data: likedData, error: likedError } = await supabase
-      .from('customer_liked_vendors')
-      .select('vendor_id, liked_at')
-      .eq('customer_id', customerId)
-      .order('liked_at', { ascending: false });
-
-    if (likedError) {
-      console.error('Error fetching liked vendors:', likedError);
-      return { error: likedError.message };
-    }
-
-    if (!likedData || likedData.length === 0) {
-      return { data: [] };
-    }
-
-    // Get vendor details for each liked vendor
-    const vendorIds = likedData.map(item => item.vendor_id);
-    const { data: vendorsData, error: vendorsError } = await supabase
-      .from('vendors')
-      .select('*')
-      .in('vendor_id', vendorIds);
-
-    if (vendorsError) {
-      console.error('Error fetching vendor details:', vendorsError);
-      return { error: vendorsError.message };
-    }
-
-    // Combine liked data with vendor details
-    const combinedData = likedData.map(liked => {
-      const vendor = vendorsData?.find(v => v.vendor_id === liked.vendor_id);
+    if (!response.ok) {
+      console.error('❌ API Error saving like:', data);
       return {
-        ...vendor,
-        liked_at: liked.liked_at
+        success: false,
+        error: data.error || `HTTP ${response.status}: Failed to save like`
       };
-    }).filter(Boolean);
+    }
 
-    return { data: combinedData };
+    console.log('✅ API: Like saved successfully:', data);
+    return data;
   } catch (error) {
-    console.error('Error:', error);
-    return { error: 'An unexpected error occurred' };
+    console.error('💥 API Error:', error);
+    return {
+      success: false,
+      error: `Network error: ${error.message}`
+    };
+  }
+};
+
+// Remove like vendor API call
+export const removeLikeVendor = async (customerId: number, vendorId: string): Promise<LikedVendorResponse> => {
+  try {
+    console.log(`API: Removing like for customer ${customerId}, vendor ${vendorId}`);
+
+    const response = await fetch(`${LIKED_VENDORS_URL}/remove-like`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        customer_id: customerId,
+        vendor_id: vendorId
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('API Error removing like:', data);
+      return {
+        success: false,
+        error: data.error || 'Failed to remove like'
+      };
+    }
+
+    console.log('API: Like removed successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    return {
+      success: false,
+      error: 'Network error - please check your connection'
+    };
+  }
+};
+
+// Get all liked vendors API call
+export const getLikedVendors = async (customerId: number): Promise<LikedVendorResponse> => {
+  try {
+    console.log(`API: Getting liked vendors for customer ${customerId}`);
+
+    const response = await fetch(`${LIKED_VENDORS_URL}/get-liked-vendors/${customerId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('API Error getting liked vendors:', data);
+      return {
+        success: false,
+        error: data.error || 'Failed to get liked vendors'
+      };
+    }
+
+    console.log('API: Got liked vendors:', data);
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    return {
+      success: false,
+      error: 'Network error - please check your connection'
+    };
+  }
+};
+
+// Check if vendor is liked API call
+export const checkVendorLiked = async (customerId: number, vendorId: string): Promise<LikedVendorResponse> => {
+  try {
+    console.log(`API: Checking if customer ${customerId} likes vendor ${vendorId}`);
+
+    const response = await fetch(`${LIKED_VENDORS_URL}/check-like/${customerId}/${vendorId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('API Error checking like status:', data);
+      return {
+        success: false,
+        error: data.error || 'Failed to check like status'
+      };
+    }
+
+    console.log('API: Like status checked:', data);
+    return data;
+  } catch (error) {
+    console.error('API Error:', error);
+    return {
+      success: false,
+      error: 'Network error - please check your connection'
+    };
   }
 };

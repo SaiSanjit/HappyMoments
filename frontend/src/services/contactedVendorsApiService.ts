@@ -1,5 +1,6 @@
 // API service for contacted vendors using backend endpoints
-const API_BASE_URL = 'http://localhost:3001/api/contacted-vendors';
+import { API_BASE_URL } from '../config/api';
+const CONTACTED_VENDORS_URL = `${API_BASE_URL}/api/contacted-vendors`;
 
 export interface ContactedVendorResponse {
   success: boolean;
@@ -57,9 +58,9 @@ export interface FlagCustomerResponse {
 export const saveContactVendor = async (customerId: number, vendorId: string): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Saving contact for customer ${customerId}, vendor ${vendorId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/save-contact`);
-    
-    const response = await fetch(`${API_BASE_URL}/save-contact`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/save-contact`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/save-contact`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -73,7 +74,7 @@ export const saveContactVendor = async (customerId: number, vendorId: string): P
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error saving contact:', data);
       return {
@@ -97,14 +98,14 @@ export const saveContactVendor = async (customerId: number, vendorId: string): P
 export const getContactedVendors = async (customerId: number): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Getting contacted vendors for customer ${customerId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/get-contacted-vendors/${customerId}`);
-    
-    const response = await fetch(`${API_BASE_URL}/get-contacted-vendors/${customerId}`);
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/get-contacted-vendors/${customerId}`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/get-contacted-vendors/${customerId}`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error getting contacted vendors:', data);
       return {
@@ -128,14 +129,14 @@ export const getContactedVendors = async (customerId: number): Promise<Contacted
 export const checkVendorContacted = async (customerId: number, vendorId: string): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Checking if customer ${customerId} has contacted vendor ${vendorId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/check-contact/${customerId}/${vendorId}`);
-    
-    const response = await fetch(`${API_BASE_URL}/check-contact/${customerId}/${vendorId}`);
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/check-contact/${customerId}/${vendorId}`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/check-contact/${customerId}/${vendorId}`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error checking contact:', data);
       return {
@@ -159,9 +160,9 @@ export const checkVendorContacted = async (customerId: number, vendorId: string)
 export const removeContactVendor = async (customerId: number, vendorId: string, reason?: string): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Removing contact for customer ${customerId}, vendor ${vendorId}`, reason ? `with reason: ${reason}` : '');
-    console.log(`🔗 API URL: ${API_BASE_URL}/remove-contact`);
-    
-    const response = await fetch(`${API_BASE_URL}/remove-contact`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/remove-contact`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/remove-contact`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -176,7 +177,7 @@ export const removeContactVendor = async (customerId: number, vendorId: string, 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error removing contact:', data);
       return {
@@ -200,8 +201,8 @@ export const removeContactVendor = async (customerId: number, vendorId: string, 
 export const updateVendorStatus = async (customerId: number, vendorId: string, status: string, notes?: string, userType: 'customer' | 'vendor' = 'customer'): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Updating status for customer ${customerId}, vendor ${vendorId}, status: ${status}, userType: ${userType}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/update-status`);
-    
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/update-status`);
+
     const body: any = {
       customer_id: customerId,
       vendor_id: vendorId,
@@ -213,8 +214,8 @@ export const updateVendorStatus = async (customerId: number, vendorId: string, s
       body.notes = notes;
       body.feedback = notes; // Also send as feedback for compatibility
     }
-    
-    const response = await fetch(`${API_BASE_URL}/update-status`, {
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/update-status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -225,7 +226,7 @@ export const updateVendorStatus = async (customerId: number, vendorId: string, s
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error updating status:', data);
       return {
@@ -249,15 +250,15 @@ export const updateVendorStatus = async (customerId: number, vendorId: string, s
 export const getStatusOptions = async (userType?: 'customer' | 'vendor'): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Getting status options for user type: ${userType || 'vendor'}`);
-    const url = userType ? `${API_BASE_URL}/status-options?userType=${userType}` : `${API_BASE_URL}/status-options`;
+    const url = userType ? `${CONTACTED_VENDORS_URL}/status-options?userType=${userType}` : `${CONTACTED_VENDORS_URL}/status-options`;
     console.log(`🔗 API URL: ${url}`);
-    
+
     const response = await fetch(url);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error getting status options:', data);
       return {
@@ -281,14 +282,14 @@ export const getStatusOptions = async (userType?: 'customer' | 'vendor'): Promis
 export const getVendorCustomers = async (vendorId: string): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Getting customers who contacted vendor ${vendorId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/get-vendor-customers/${vendorId}`);
-    
-    const response = await fetch(`${API_BASE_URL}/get-vendor-customers/${vendorId}`);
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/get-vendor-customers/${vendorId}`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/get-vendor-customers/${vendorId}`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error getting vendor customers:', data);
       return {
@@ -312,16 +313,16 @@ export const getVendorCustomers = async (vendorId: string): Promise<ContactedVen
 export const updateVendorStatusForContact = async (contactId: string, vendorStatus: string, customerId?: number, vendorId?: string): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Updating vendor status for contact ${contactId} to ${vendorStatus}`);
-    
+
     // If customerId and vendorId are provided, use unified endpoint
     if (customerId && vendorId) {
-      console.log(`🔗 API URL: ${API_BASE_URL}/update-status`);
-      const response = await fetch(`${API_BASE_URL}/update-status`, {
+      console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/update-status`);
+      const response = await fetch(`${CONTACTED_VENDORS_URL}/update-status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           customer_id: customerId,
           vendor_id: vendorId,
           status: vendorStatus,
@@ -332,7 +333,7 @@ export const updateVendorStatusForContact = async (contactId: string, vendorStat
       console.log(`📡 Response status: ${response.status} ${response.statusText}`);
       const data = await response.json();
       console.log(`📦 Response data:`, data);
-      
+
       if (!response.ok) {
         console.error('❌ API Error updating vendor status:', data);
         return {
@@ -344,10 +345,10 @@ export const updateVendorStatusForContact = async (contactId: string, vendorStat
       console.log('✅ API: Vendor status updated successfully:', data);
       return data;
     }
-    
+
     // Fallback to old endpoint if contactId only
-    console.log(`🔗 API URL: ${API_BASE_URL}/update-vendor-status/${contactId}`);
-    const response = await fetch(`${API_BASE_URL}/update-vendor-status/${contactId}`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/update-vendor-status/${contactId}`);
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/update-vendor-status/${contactId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -358,7 +359,7 @@ export const updateVendorStatusForContact = async (contactId: string, vendorStat
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error updating vendor status:', data);
       return {
@@ -382,9 +383,9 @@ export const updateVendorStatusForContact = async (contactId: string, vendorStat
 export const updateNotesForContact = async (contactId: string, notes: string): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Updating notes for contact ${contactId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/update-notes/${contactId}`);
-    
-    const response = await fetch(`${API_BASE_URL}/update-notes/${contactId}`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/update-notes/${contactId}`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/update-notes/${contactId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -395,7 +396,7 @@ export const updateNotesForContact = async (contactId: string, notes: string): P
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error updating notes:', data);
       return {
@@ -419,9 +420,9 @@ export const updateNotesForContact = async (contactId: string, notes: string): P
 export const flagCustomer = async (vendorId: string, customerId: number, reason: string): Promise<FlagCustomerResponse> => {
   try {
     console.log(`🌐 API: Flagging customer ${customerId} by vendor ${vendorId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/flag-customer`);
-    
-    const response = await fetch(`${API_BASE_URL}/flag-customer`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/flag-customer`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/flag-customer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -436,7 +437,7 @@ export const flagCustomer = async (vendorId: string, customerId: number, reason:
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error flagging customer:', data);
       return {
@@ -460,9 +461,9 @@ export const flagCustomer = async (vendorId: string, customerId: number, reason:
 export const unflagCustomer = async (vendorId: string, customerId: number): Promise<FlagCustomerResponse> => {
   try {
     console.log(`🌐 API: Unflagging customer ${customerId} by vendor ${vendorId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/unflag-customer`);
-    
-    const response = await fetch(`${API_BASE_URL}/unflag-customer`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/unflag-customer`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/unflag-customer`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -476,7 +477,7 @@ export const unflagCustomer = async (vendorId: string, customerId: number): Prom
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error unflagging customer:', data);
       return {
@@ -504,9 +505,9 @@ export const saveNotInterestedReason = async (
 ): Promise<ContactedVendorResponse> => {
   try {
     console.log(`🌐 API: Saving not interested reason for customer ${customerId}, vendor ${vendorId}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/save-not-interested-reason`);
-    
-    const response = await fetch(`${API_BASE_URL}/save-not-interested-reason`, {
+    console.log(`🔗 API URL: ${CONTACTED_VENDORS_URL}/save-not-interested-reason`);
+
+    const response = await fetch(`${CONTACTED_VENDORS_URL}/save-not-interested-reason`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -521,7 +522,7 @@ export const saveNotInterestedReason = async (
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error saving not interested reason:', data);
       return {

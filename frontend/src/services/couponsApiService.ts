@@ -1,8 +1,7 @@
 // API service for coupons management
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-production-api.com/api/coupons'
-  : 'http://localhost:3001/api/coupons';
+const COUPONS_API_URL = `${API_BASE_URL}/api/coupons`;
 
 export interface Coupon {
   coupon_id: number;
@@ -40,14 +39,14 @@ export interface CouponStats {
 export const getActiveCoupons = async (): Promise<CouponResponse> => {
   try {
     console.log(`🌐 API: Fetching active coupons`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/active`);
-    
-    const response = await fetch(`${API_BASE_URL}/active`);
+    console.log(`🔗 API URL: ${COUPONS_API_URL}/active`);
+
+    const response = await fetch(`${COUPONS_API_URL}/active`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error fetching active coupons:', data);
       return {
@@ -71,14 +70,14 @@ export const getActiveCoupons = async (): Promise<CouponResponse> => {
 export const getRandomCoupon = async (): Promise<CouponResponse> => {
   try {
     console.log(`🌐 API: Fetching random coupon`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/random`);
-    
-    const response = await fetch(`${API_BASE_URL}/random`);
+    console.log(`🔗 API URL: ${COUPONS_API_URL}/random`);
+
+    const response = await fetch(`${COUPONS_API_URL}/random`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error fetching random coupon:', data);
       return {
@@ -102,14 +101,14 @@ export const getRandomCoupon = async (): Promise<CouponResponse> => {
 export const getCouponByCode = async (couponCode: string): Promise<CouponResponse> => {
   try {
     console.log(`🌐 API: Fetching coupon by code: ${couponCode}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/code/${couponCode}`);
-    
-    const response = await fetch(`${API_BASE_URL}/code/${couponCode}`);
+    console.log(`🔗 API URL: ${COUPONS_API_URL}/code/${couponCode}`);
+
+    const response = await fetch(`${COUPONS_API_URL}/code/${couponCode}`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error fetching coupon by code:', data);
       return {
@@ -133,9 +132,9 @@ export const getCouponByCode = async (couponCode: string): Promise<CouponRespons
 export const useCoupon = async (couponCode: string): Promise<CouponResponse> => {
   try {
     console.log(`🌐 API: Using coupon: ${couponCode}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/use/${couponCode}`);
-    
-    const response = await fetch(`${API_BASE_URL}/use/${couponCode}`, {
+    console.log(`🔗 API URL: ${COUPONS_API_URL}/use/${couponCode}`);
+
+    const response = await fetch(`${COUPONS_API_URL}/use/${couponCode}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -145,7 +144,7 @@ export const useCoupon = async (couponCode: string): Promise<CouponResponse> => 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error using coupon:', data);
       return {
@@ -169,14 +168,14 @@ export const useCoupon = async (couponCode: string): Promise<CouponResponse> => 
 export const getCouponStats = async (): Promise<{ success: boolean; data?: CouponStats; error?: string }> => {
   try {
     console.log(`🌐 API: Fetching coupon statistics`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/stats`);
-    
-    const response = await fetch(`${API_BASE_URL}/stats`);
+    console.log(`🔗 API URL: ${COUPONS_API_URL}/stats`);
+
+    const response = await fetch(`${COUPONS_API_URL}/stats`);
 
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ API Error fetching coupon stats:', data);
       return {

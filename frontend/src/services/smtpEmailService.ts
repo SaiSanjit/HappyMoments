@@ -1,15 +1,9 @@
 // SMTP Email Service Configuration
 // This file contains the email service setup for production use
 
-// Safe environment variable access that works in both browser and Node.js
+// Safe environment variable access for the browser (Vite)
 const getEnvVar = (key: string, defaultValue?: string): string | undefined => {
-  // Check if we're in a browser environment
-  if (typeof window !== 'undefined') {
-    // In browser, use import.meta.env (Vite) or fallback to undefined
-    return (import.meta as any)?.env?.[key] || defaultValue;
-  }
-  // In Node.js, use process.env
-  return process.env[key] || defaultValue;
+  return (import.meta as any)?.env?.[key] || defaultValue;
 };
 
 export interface EmailConfig {
@@ -143,13 +137,14 @@ export const emailTemplates = {
 };
 
 // Email API configuration
-const EMAIL_API_URL = getEnvVar('VITE_EMAIL_API_URL') || 'http://localhost:3001/api/email';
+import { API_BASE_URL } from '../config/api';
+const EMAIL_API_URL = getEnvVar('VITE_EMAIL_API_URL') || `${API_BASE_URL}/api/email`;
 
 // Send email using the backend API
-export const sendEmailWithNodemailer = async (options: EmailOptions): Promise<{ success: boolean; error?: any }> => {
+export const sendEmailWithNodemailer = async (options: EmailOptions): Promise<{ success: boolean; messageId?: string; error?: any }> => {
   try {
     console.log('📧 Sending email via API to:', options.to);
-    
+
     const response = await fetch(`${EMAIL_API_URL}/send`, {
       method: 'POST',
       headers: {
@@ -172,7 +167,7 @@ export const sendEmailWithNodemailer = async (options: EmailOptions): Promise<{ 
       console.error('❌ Failed to send email:', result.error);
       return { success: false, error: result.error || 'Unknown error' };
     }
-    
+
   } catch (error) {
     console.error('❌ Error calling email API:', error);
     return { success: false, error: error.message || 'Network error' };
@@ -185,12 +180,12 @@ export const sendVerificationEmail = async (
   name: string,
   token: string,
   baseUrl?: string
-): Promise<{ success: boolean; error?: any }> => {
+): Promise<{ success: boolean; messageId?: string; error?: any }> => {
   try {
     const verificationBaseUrl = baseUrl || window.location.origin;
-    
+
     console.log('📧 Sending verification email via API to:', email);
-    
+
     const response = await fetch(`${EMAIL_API_URL}/send-verification`, {
       method: 'POST',
       headers: {
@@ -213,7 +208,7 @@ export const sendVerificationEmail = async (
       console.error('❌ Failed to send verification email:', result.error);
       return { success: false, error: result.error || 'Unknown error' };
     }
-    
+
   } catch (error) {
     console.error('❌ Error calling verification email API:', error);
     return { success: false, error: error.message || 'Network error' };
@@ -221,10 +216,10 @@ export const sendVerificationEmail = async (
 };
 
 // Resend verification email using the backend API
-export const resendVerificationEmail = async (email: string): Promise<{ success: boolean; error?: any }> => {
+export const resendVerificationEmail = async (email: string): Promise<{ success: boolean; messageId?: string; error?: any }> => {
   try {
     console.log('📧 Resending verification email via API to:', email);
-    
+
     const response = await fetch(`${EMAIL_API_URL}/resend-verification`, {
       method: 'POST',
       headers: {
@@ -244,7 +239,7 @@ export const resendVerificationEmail = async (email: string): Promise<{ success:
       console.error('❌ Failed to resend verification email:', result.error);
       return { success: false, error: result.error || 'Unknown error' };
     }
-    
+
   } catch (error) {
     console.error('❌ Error calling resend verification email API:', error);
     return { success: false, error: error.message || 'Network error' };
@@ -252,10 +247,10 @@ export const resendVerificationEmail = async (email: string): Promise<{ success:
 };
 
 // Test email function
-export const testEmailService = async (testEmail?: string): Promise<{ success: boolean; error?: any }> => {
+export const testEmailService = async (testEmail?: string): Promise<{ success: boolean; messageId?: string; error?: any }> => {
   try {
     console.log('🧪 Testing email service...');
-    
+
     const response = await fetch(`${EMAIL_API_URL}/test`, {
       method: 'POST',
       headers: {
@@ -275,7 +270,7 @@ export const testEmailService = async (testEmail?: string): Promise<{ success: b
       console.error('❌ Failed to send test email:', result.error);
       return { success: false, error: result.error || 'Unknown error' };
     }
-    
+
   } catch (error) {
     console.error('❌ Error calling test email API:', error);
     return { success: false, error: error.message || 'Network error' };
@@ -289,7 +284,7 @@ export const emailServiceProviders = {
     apiKey: getEnvVar('SENDGRID_API_KEY'),
     from: 'test@bindu.tconnecthub.com'
   },
-  
+
   // AWS SES
   awsSES: {
     region: 'us-east-1',
@@ -297,7 +292,7 @@ export const emailServiceProviders = {
     secretAccessKey: getEnvVar('AWS_SECRET_ACCESS_KEY'),
     from: 'test@bindu.tconnecthub.com'
   },
-  
+
   // Resend
   resend: {
     apiKey: getEnvVar('RESEND_API_KEY'),

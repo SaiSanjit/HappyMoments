@@ -1,5 +1,6 @@
 // Admin API service for sending customers to vendors
-const API_BASE_URL = 'http://localhost:3001/api/contacted-vendors';
+import { API_BASE_URL } from '../config/api';
+const ADMIN_API_URL = `${API_BASE_URL}/api/contacted-vendors`;
 
 export interface AdminSendCustomerRequest {
   vendor_id: number;
@@ -27,9 +28,9 @@ export interface AdminSendCustomerResponse {
 export const adminSendCustomerToVendor = async (request: AdminSendCustomerRequest): Promise<AdminSendCustomerResponse> => {
   try {
     console.log(`🌐 Admin API: Sending customer ${request.customer_name} to vendor ${request.vendor_id}`);
-    console.log(`🔗 API URL: ${API_BASE_URL}/admin-send-customer`);
-    
-    const response = await fetch(`${API_BASE_URL}/admin-send-customer`, {
+    console.log(`🔗 API URL: ${ADMIN_API_URL}/admin-send-customer`);
+
+    const response = await fetch(`${ADMIN_API_URL}/admin-send-customer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,7 +41,7 @@ export const adminSendCustomerToVendor = async (request: AdminSendCustomerReques
     console.log(`📡 Response status: ${response.status} ${response.statusText}`);
     const data = await response.json();
     console.log(`📦 Response data:`, data);
-    
+
     if (!response.ok) {
       console.error('❌ Admin API Error:', data);
       return {
