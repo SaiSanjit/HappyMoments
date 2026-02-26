@@ -19,6 +19,7 @@ import { useCustomerAuth } from "@/contexts/CustomerAuthContext";
 import { vendorLogin, saveVendorSession, getLoggedInVendor, vendorLogout, getCustomerNotifications, markAllCustomerNotificationsAsRead, clearCustomerNotification } from "@/services/supabaseService";
 import { getLikedVendors } from "@/services/likedVendorsApiService";
 import { CATEGORY_LIST } from "@/constants/categories";
+import { API_BASE_URL } from "@/config/api";
 
 const Header = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -41,7 +42,7 @@ const Header = () => {
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const { customer, signOut: customerSignOut, signIn, signUp } = useCustomerAuth();
-  
+
   // Debug: Log user state
   console.log('Header - User state:', user);
 
@@ -98,7 +99,7 @@ const Header = () => {
         try {
           const notificationsData = await getCustomerNotifications(customer.id);
           setNotifications(notificationsData);
-          
+
           // Count unread notifications
           const unreadCount = notificationsData.filter(notification => !notification.is_read).length;
           setUnreadNotificationsCount(unreadCount);
@@ -114,7 +115,7 @@ const Header = () => {
     };
 
     fetchCustomerNotifications();
-    
+
     // Refresh notifications every 30 seconds
     const interval = setInterval(fetchCustomerNotifications, 30000);
     return () => clearInterval(interval);
@@ -152,7 +153,7 @@ const Header = () => {
 
   const handleVendorLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!vendorUsername.trim() || !vendorPassword.trim()) {
       setVendorLoginError('Please enter both username and password');
       return;
@@ -163,7 +164,7 @@ const Header = () => {
 
     try {
       const result = await vendorLogin(vendorUsername.trim(), vendorPassword);
-      
+
       if (result.success && result.vendor) {
         saveVendorSession(result.vendor);
         setLoggedInVendor(result.vendor);
@@ -226,35 +227,35 @@ const Header = () => {
 
   const [scrollDirection, setScrollDirection] = useState<"up" | "down" | null>(null);
   const [lastScrollY, setLastScrollY] = useState(0);
-  
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-  
+
       if (currentScrollY > lastScrollY && currentScrollY > 20) {
         setScrollDirection("down");
       } else if (currentScrollY < lastScrollY) {
         setScrollDirection("up");
       }
-  
+
       setLastScrollY(currentScrollY);
       setScrolled(currentScrollY > 20);
     };
-  
+
     window.addEventListener("scroll", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, [lastScrollY]);
-  
+
   return (
     <header
-    className={`fixed top-0 left-0 right-0 z-50 py-2 md:py-3 transition-all duration-300 transform
+      className={`fixed top-0 left-0 right-0 z-50 py-2 md:py-3 transition-all duration-300 transform
       ${scrolled ? "bg-wedding-navy/95 backdrop-blur-md shadow-lg shadow-orange-500/20" : "bg-wedding-navy/95 backdrop-blur-md"}
       ${scrollDirection === "down" ? "-translate-y-full" : "translate-y-0"}
     `}
-    style={{ zIndex: 9999, height: 'auto', minHeight: '64px', maxHeight: 'none', overflow: 'visible' }}
-  >
+      style={{ zIndex: 9999, height: 'auto', minHeight: '64px', maxHeight: 'none', overflow: 'visible' }}
+    >
       <div className="container-custom flex items-center justify-between px-4 md:px-6">
         <div className="flex items-center space-x-2 md:space-x-8">
           {/* Logo with image */}
@@ -276,7 +277,7 @@ const Header = () => {
                 <DropdownMenuTrigger className="flex items-center text-white hover:text-wedding-orange transition-custom">
                   Categories <ChevronDown className="ml-1 h-4 w-4" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent 
+                <DropdownMenuContent
                   className="bg-white/95 backdrop-blur-md border border-wedding-orange/20 shadow-card p-2 rounded-xl w-64 animate-fade-in max-h-96 overflow-y-auto"
                   side="bottom"
                   align="start"
@@ -291,9 +292,9 @@ const Header = () => {
                     const categorySlug = category.name.toLowerCase()
                       .replace(/\s+/g, '-')
                       .replace(/\//g, '-');
-                    
+
                     return (
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         key={category.code}
                         className="hover:bg-wedding-orange-light rounded-lg transition-custom cursor-pointer px-3 py-2"
                       >
@@ -308,7 +309,7 @@ const Header = () => {
             </div>
 
             {/* Donate Food Button - Prominent placement */}
-            <button 
+            <button
               onClick={() => {
                 const element = document.getElementById('meals-of-kindness');
                 if (element) {
@@ -330,7 +331,7 @@ const Header = () => {
           {customer ? (
             <div className="hidden md:flex items-center" style={{ gap: '16px' }}>
               {/* Liked Vendors Heart Icon */}
-              <Link 
+              <Link
                 to="/liked-vendors"
                 className="relative flex items-center text-white hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-white/10"
                 title="Liked Vendors"
@@ -377,13 +378,12 @@ const Header = () => {
                           return (
                             <div
                               key={notification.id}
-                              className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${
-                                isVendorUpdate
+                              className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${isVendorUpdate
                                   ? 'bg-green-50 hover:bg-green-100'
                                   : !notification.is_read
                                     ? 'bg-orange-50'
                                     : ''
-                              }`}
+                                }`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1">
@@ -434,7 +434,7 @@ const Header = () => {
               </div>
 
               {/* My Vendors as Text Link */}
-              <Link 
+              <Link
                 to="/my-vendors"
                 className="text-white hover:text-orange-400 transition-colors font-medium text-sm px-2 py-1 rounded hover:bg-white/10 whitespace-nowrap"
                 title="My Vendors"
@@ -443,7 +443,7 @@ const Header = () => {
               </Link>
 
               {/* Helpline Button */}
-              <Link 
+              <Link
                 to="/contact"
                 className="flex items-center gap-2 text-white hover:text-orange-400 transition-colors font-medium text-sm px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap border border-white/20 hover:border-orange-400/50"
                 title="Contact Support"
@@ -466,7 +466,7 @@ const Header = () => {
               {/* Desktop buttons */}
               <div className="hidden md:flex items-center space-x-3">
                 {/* Helpline Button for non-logged in users */}
-                <Link 
+                <Link
                   to="/contact"
                   className="flex items-center gap-2 text-white hover:text-orange-400 transition-colors font-medium text-sm px-3 py-2 rounded-lg hover:bg-white/10 border border-white/20 hover:border-orange-400/50"
                   title="Contact Support"
@@ -522,9 +522,8 @@ const Header = () => {
       {/* Mobile menu - shows only Sign Up, Login, Vendor for non-logged in users */}
       {mobileMenuOpen && !customer && (
         <div
-          className={`lg:hidden absolute top-full left-0 right-0 ${
-            scrolled ? "bg-wedding-navy/95" : "bg-wedding-navy/80"
-          } backdrop-blur-md shadow-lg border-t border-white/10 animate-fade-in`}
+          className={`lg:hidden absolute top-full left-0 right-0 ${scrolled ? "bg-wedding-navy/95" : "bg-wedding-navy/80"
+            } backdrop-blur-md shadow-lg border-t border-white/10 animate-fade-in`}
         >
           <div className="container-custom py-4 flex flex-col" style={{ gap: '14px' }}>
             <button
@@ -562,9 +561,8 @@ const Header = () => {
       {/* Mobile menu - full menu for logged in users */}
       {mobileMenuOpen && customer && (
         <div
-          className={`lg:hidden absolute top-full left-0 right-0 ${
-            scrolled ? "bg-wedding-navy/95" : "bg-wedding-navy/80"
-          } backdrop-blur-md shadow-lg border-t border-white/10 animate-fade-in`}
+          className={`lg:hidden absolute top-full left-0 right-0 ${scrolled ? "bg-wedding-navy/95" : "bg-wedding-navy/80"
+            } backdrop-blur-md shadow-lg border-t border-white/10 animate-fade-in`}
         >
           <div className="container-custom py-4 flex flex-col space-y-4">
             <div className="flex flex-col space-y-2">
@@ -660,14 +658,14 @@ const Header = () => {
                 <div className="text-center">
                   <p className="text-sm text-gray-600">Access your vendor dashboard to manage bookings and update your profile</p>
                 </div>
-                
+
                 {vendorLoginError && (
                   <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <span className="text-sm">{vendorLoginError}</span>
                   </div>
                 )}
-                
+
                 <form onSubmit={handleVendorLogin} className="space-y-3">
                   <div>
                     <Input
@@ -697,7 +695,7 @@ const Header = () => {
                     {vendorLoginLoading ? 'Signing In...' : 'Sign In as Vendor'}
                   </Button>
                 </form>
-                
+
                 <div className="text-center">
                   <p className="text-xs text-blue-800 font-medium mb-1">Demo Credentials:</p>
                   <div className="text-xs text-blue-700">
@@ -719,7 +717,7 @@ const Header = () => {
               Customer Login
             </DialogTitle>
           </DialogHeader>
-          <CustomerLoginModalContent 
+          <CustomerLoginModalContent
             onClose={() => setShowCustomerLoginModal(false)}
             onSwitchToSignup={() => {
               setShowCustomerLoginModal(false);
@@ -737,7 +735,7 @@ const Header = () => {
               Create Customer Account
             </DialogTitle>
           </DialogHeader>
-          <CustomerSignupModalContent 
+          <CustomerSignupModalContent
             onClose={() => setShowCustomerSignupModal(false)}
             onSwitchToLogin={() => {
               setShowCustomerSignupModal(false);
@@ -974,7 +972,7 @@ const CustomerSignupModalContent: React.FC<{ onClose: () => void; onSwitchToLogi
 
   const verifyPreSignupToken = async (email: string, token: string) => {
     try {
-      const response = await fetch('http://localhost:3001/api/email/verify-pre-signup', {
+      const response = await fetch(`${API_BASE_URL}/api/email/verify-pre-signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, token })
@@ -1021,10 +1019,10 @@ const CustomerSignupModalContent: React.FC<{ onClose: () => void; onSwitchToLogi
 
     setEmailVerificationStatus('sending');
     try {
-      const response = await fetch('http://localhost:3001/api/email/pre-signup-verification', {
+      const response = await fetch(`${API_BASE_URL}/api/email/pre-signup-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email.trim(), name: formData.fullName.trim() })
+        body: JSON.stringify({ email: formData.email.trim(), name: formData.fullName.trim() || formData.email.split('@')[0] || 'User' })
       });
       const result = await response.json();
       if (response.ok && result.success) {
@@ -1265,9 +1263,9 @@ const CustomerSignupModalContent: React.FC<{ onClose: () => void; onSwitchToLogi
               {errors.confirmPassword && <p className="text-sm text-red-500">{errors.confirmPassword}</p>}
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50" 
+            <Button
+              type="submit"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
               disabled={loading || !isFormValid()}
             >
               {loading ? (
