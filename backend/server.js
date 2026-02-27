@@ -32,7 +32,9 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:5173',
     'http://localhost:8080', // Additional port for development
-    'http://localhost:3000'  // React default port
+    'http://localhost:3000',  // React default port
+    'https://happy-moments-eta.vercel.app', // Main deployed frontend
+    /^https:\/\/happy-moments.*\.vercel\.app$/ // Allow preview deployments
   ],
   credentials: true
 }));
