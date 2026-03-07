@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Button } from '../components/ui/button';
@@ -12,7 +13,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { getVendorByFieldId, updateVendor, updateVendorVerified, getVendorMedia, updateVendorCatalogImages, toggleImageHighlight, deleteVendorMedia } from '../services/supabaseService';
 import ImageUpload from '../components/ImageUpload';
 import { Vendor } from '../lib/supabase';
-import { CATEGORY_LIST } from '@/constants/categories';
+import { CATEGORY_LIST } from '../constants/categories';
 
 // Indian States and Union Territories
 const indianStates = [
@@ -63,7 +64,7 @@ type VendorEditForm = {
   subcategory?: string;
   brand_logo_url?: string;
   contact_person_image_url?: string;
-  
+
   // Contact Information
   phone_number: string;
   alternate_number?: string;  // Admin-only field
@@ -71,7 +72,7 @@ type VendorEditForm = {
   email?: string;
   instagram?: string;
   address?: string;
-  
+
   // Business Details
   experience?: string;
   quick_intro?: string;
@@ -80,7 +81,7 @@ type VendorEditForm = {
   highlight_features?: string[];
   starting_price: number;
   languages_spoken?: string[];
-  
+
   // JSON Fields
   services?: Array<{
     name: string;
@@ -118,7 +119,7 @@ type VendorEditForm = {
       field_value: string;
     }>;
   };
-  
+
   // Status Fields
   verified: boolean;
   currently_available: boolean;
@@ -127,7 +128,7 @@ type VendorEditForm = {
 // Utility function to remove duplicates from string arrays (case-insensitive)
 const deduplicateStringArray = (array: string[]): string[] => {
   if (!Array.isArray(array)) return [];
-  
+
   return array.filter((item, index, arr) => {
     if (!item || typeof item !== 'string' || item.trim() === '') return false;
     const trimmedLower = item.trim().toLowerCase();
@@ -149,7 +150,7 @@ const AdminVendorEdit: React.FC = () => {
   const [isLoadingFormData, setIsLoadingFormData] = useState(false);
   const [highlightMessage, setHighlightMessage] = useState<string>('');
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
-  const [currentHighlightStatus, setCurrentHighlightStatus] = useState<Array<{id: string, media_url: string, is_highlighted: boolean}>>([]);
+  const [currentHighlightStatus, setCurrentHighlightStatus] = useState<Array<{ id: number, media_url: string, is_highlighted: boolean }>>([]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteConfirmType, setDeleteConfirmType] = useState<'brand_logo' | 'contact_person' | 'catalog'>('brand_logo');
   const [deleteConfirmData, setDeleteConfirmData] = useState<any>(null);
@@ -186,12 +187,12 @@ const AdminVendorEdit: React.FC = () => {
 
   const { fields: highlightFields, append: appendHighlight, remove: removeHighlight } = useFieldArray({
     control,
-    name: "highlight_features"
+    name: "highlight_features" as never
   });
 
   const { fields: deliverableFields, append: appendDeliverable, remove: removeDeliverable } = useFieldArray({
     control,
-    name: "deliverables"
+    name: "deliverables" as never
   });
 
   useEffect(() => {
@@ -230,10 +231,10 @@ const AdminVendorEdit: React.FC = () => {
   const loadVendorData = async (vendorData: Vendor) => {
     try {
       setIsLoadingFormData(true);
-      
+
       // Process services from both services and specialties
-      const allServices: Array<{name: string, description: string, price?: string}> = [];
-      
+      const allServices: Array<{ name: string, description: string, price?: string }> = [];
+
       if (vendorData.services && Array.isArray(vendorData.services)) {
         vendorData.services.forEach(service => {
           if (service && service.name && service.name.trim() !== '') {
@@ -260,7 +261,7 @@ const AdminVendorEdit: React.FC = () => {
         subcategory: vendorData.subcategory || '',
         brand_logo_url: vendorData.brand_logo_url || '',
         contact_person_image_url: vendorData.contact_person_image_url || '',
-        
+
         // Contact Information
         phone_number: vendorData.phone_number || '',
         alternate_number: vendorData.alternate_number || '',
@@ -268,7 +269,7 @@ const AdminVendorEdit: React.FC = () => {
         email: vendorData.email || '',
         instagram: vendorData.instagram || '',
         address: vendorData.address || '',
-        
+
         // Business Details
         experience: vendorData.experience || '',
         quick_intro: vendorData.quick_intro || '',
@@ -309,7 +310,7 @@ const AdminVendorEdit: React.FC = () => {
       if (formData.highlight_features && Array.isArray(formData.highlight_features)) {
         formData.highlight_features.forEach(feature => {
           if (feature && feature.trim() !== '') {
-            appendHighlight(feature.trim());
+            appendHighlight(feature.trim() as never);
           }
         });
       }
@@ -318,7 +319,7 @@ const AdminVendorEdit: React.FC = () => {
       if (formData.deliverables && Array.isArray(formData.deliverables)) {
         formData.deliverables.forEach(deliverable => {
           if (deliverable && deliverable.trim() !== '') {
-            appendDeliverable(deliverable.trim());
+            appendDeliverable(deliverable.trim() as never);
           }
         });
       }
@@ -350,11 +351,11 @@ const AdminVendorEdit: React.FC = () => {
       const catalogImages = mediaData
         .filter(media => media.category === 'catalog')
         .map(media => media.media_url);
-      
+
       setCatalogImages(catalogImages);
       setOriginalCatalogImages([...catalogImages]);
       setCatalogImagesWithMeta(mediaData.filter(media => media.category === 'catalog'));
-      
+
       // Load highlight status
       const highlightStatus = mediaData
         .filter(media => media.category === 'catalog')
@@ -377,7 +378,7 @@ const AdminVendorEdit: React.FC = () => {
 
     try {
       console.log('Form data received:', data);
-      
+
       // Process the form data
       const processedData = {
         ...data,
@@ -401,19 +402,19 @@ const AdminVendorEdit: React.FC = () => {
 
       // Update vendor directly (no approval workflow for admin)
       const updateResult = await updateVendor(vendor.vendor_id, processedData);
-      
+
       console.log('Update result:', updateResult);
-      
+
       if (updateResult) {
         setSuccessMessage('Vendor profile updated successfully!');
         setTimeout(() => setSuccessMessage(''), 3000);
-        
+
         // Refresh vendor data
         await fetchVendor();
       } else {
         setError('Failed to update vendor profile. Please try again.');
       }
-      
+
     } catch (error) {
       console.error('Error updating vendor:', error);
       setError('Failed to update vendor profile. Please try again.');
@@ -428,10 +429,10 @@ const AdminVendorEdit: React.FC = () => {
     try {
       const newCatalogImages = [...catalogImages, ...urls];
       setCatalogImages(newCatalogImages);
-      
+
       // Update in database
       await updateVendorCatalogImages(vendorId, newCatalogImages);
-      
+
       // Refresh the catalog images
       await loadCatalogImages();
       setForceRefresh(prev => prev + 1);
@@ -444,11 +445,16 @@ const AdminVendorEdit: React.FC = () => {
     if (!vendorId) return;
 
     try {
-      await toggleImageHighlight(vendorId, imageUrl);
-      await loadCatalogImages();
-      setHighlightMessage('Highlight status updated successfully!');
-      setTimeout(() => setHighlightMessage(''), 3000);
-      } catch (error) {
+      const mediaItem = catalogImagesWithMeta.find(m => m.media_url === imageUrl);
+      if (mediaItem) {
+        // Find current highlight status to toggle it
+        const isCurrentlyHighlighted = currentHighlightStatus.find(m => m.media_url === imageUrl)?.is_highlighted || false;
+        await toggleImageHighlight(mediaItem.id.toString(), !isCurrentlyHighlighted);
+        await loadCatalogImages();
+        setHighlightMessage('Highlight status updated successfully!');
+        setTimeout(() => setHighlightMessage(''), 3000);
+      }
+    } catch (error) {
       console.error('Error toggling highlight:', error);
     }
   };
@@ -457,8 +463,11 @@ const AdminVendorEdit: React.FC = () => {
     if (!vendorId) return;
 
     try {
-      await deleteVendorMedia(vendorId, imageUrl);
-      await loadCatalogImages();
+      const mediaItem = catalogImagesWithMeta.find(m => m.media_url === imageUrl);
+      if (mediaItem) {
+        await deleteVendorMedia(mediaItem.id.toString());
+        await loadCatalogImages();
+      }
     } catch (error) {
       console.error('Error deleting image:', error);
     }
@@ -548,49 +557,49 @@ const AdminVendorEdit: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name *</label>
                   <Input
                     {...register('brand_name', { required: 'Brand name is required' })}
                     placeholder="Enter brand name"
-                />
-                {errors.brand_name && (
+                  />
+                  {errors.brand_name && (
                     <p className="text-red-500 text-sm mt-1">{errors.brand_name.message}</p>
-                )}
-              </div>
-              <div>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person Name *</label>
                   <Input
                     {...register('spoc_name', { required: 'Contact person name is required' })}
                     placeholder="Enter contact person name"
-                />
-                {errors.spoc_name && (
+                  />
+                  {errors.spoc_name && (
                     <p className="text-red-500 text-sm mt-1">{errors.spoc_name.message}</p>
-                )}
-              </div>
-              <div>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                <select
+                  <select
                     {...register('category', { required: 'Category is required' })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Category</option>
-                  {CATEGORY_LIST.map((category) => (
-                    <option key={category.code} value={category.name}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.category && (
+                  >
+                    <option value="">Select Category</option>
+                    {CATEGORY_LIST.map((category) => (
+                      <option key={category.code} value={category.name}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.category && (
                     <p className="text-red-500 text-sm mt-1">{errors.category.message}</p>
-                )}
-              </div>
-              <div>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
                   <Input
                     {...register('subcategory')}
-                  placeholder="Enter subcategory (optional)"
-                />
+                    placeholder="Enter subcategory (optional)"
+                  />
                 </div>
               </div>
 
@@ -620,37 +629,37 @@ const AdminVendorEdit: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                   <Input
                     {...register('phone_number', { required: 'Phone number is required' })}
                     placeholder="Enter phone number"
-                />
-                {errors.phone_number && (
+                  />
+                  {errors.phone_number && (
                     <p className="text-red-500 text-sm mt-1">{errors.phone_number.message}</p>
-                )}
-              </div>
-              <div>
+                  )}
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
                   <Input
                     {...register('whatsapp_number')}
                     placeholder="Enter WhatsApp number"
-                />
-              </div>
-              <div>
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <Input
                     {...register('email')}
-                  type="email"
+                    type="email"
                     placeholder="Enter email address"
-                />
-              </div>
-              <div>
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Instagram Handle</label>
                   <Input
                     {...register('instagram')}
-                  placeholder="@username"
-                />
+                    placeholder="@username"
+                  />
                 </div>
               </div>
               <div>
@@ -681,10 +690,10 @@ const AdminVendorEdit: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Starting Price (₹) *</label>
                   <Input
-                    {...register('starting_price', { 
+                    {...register('starting_price', {
                       required: "Starting price is required",
                       min: { value: 1, message: "Starting price must be greater than 0" },
-                      valueAsNumber: true 
+                      valueAsNumber: true
                     })}
                     type="number"
                     placeholder="e.g., 35000"
@@ -695,7 +704,7 @@ const AdminVendorEdit: React.FC = () => {
                   )}
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Quick Intro</label>
                 <Input
@@ -751,9 +760,9 @@ const AdminVendorEdit: React.FC = () => {
                   <label htmlFor="verified" className="text-sm font-medium text-gray-700">
                     Verified Vendor
                   </label>
-                  </div>
+                </div>
                 <div className="flex items-center space-x-2">
-                      <input
+                  <input
                     {...register('currently_available')}
                     type="checkbox"
                     id="currently_available"
@@ -791,7 +800,7 @@ const AdminVendorEdit: React.FC = () => {
               <CardTitle className="flex justify-between items-center">
                 <span>Services</span>
                 <Button
-                type="button"
+                  type="button"
                   onClick={() => appendService({ name: '', description: '', price: '' })}
                   className="flex items-center space-x-2"
                 >
@@ -812,7 +821,7 @@ const AdminVendorEdit: React.FC = () => {
                       {...register(`services.${index}.price`)}
                       placeholder="Price (optional)"
                     />
-            </div>
+                  </div>
                   <Textarea
                     {...register(`services.${index}.description`)}
                     placeholder="Service description"
@@ -903,7 +912,7 @@ const AdminVendorEdit: React.FC = () => {
                 </Button>
               </CardTitle>
               <p className="text-sm text-gray-600 mt-2">
-                Add customer reviews that will be displayed on the vendor's public profile. 
+                Add customer reviews that will be displayed on the vendor's public profile.
                 These reviews are visible to customers browsing the website.
               </p>
             </CardHeader>
@@ -921,7 +930,7 @@ const AdminVendorEdit: React.FC = () => {
                     <Plus className="w-4 h-4 mr-2" />
                     Add First Review
                   </Button>
-            </div>
+                </div>
               ) : (
                 reviewFields.map((field, index) => (
                   <div key={field.id} className="border border-gray-200 p-6 rounded-lg space-y-4 bg-gradient-to-r from-green-50 to-blue-50">
@@ -936,7 +945,7 @@ const AdminVendorEdit: React.FC = () => {
                         <Trash2 className="w-4 h-4 mr-2" />
                         Remove Review
                       </Button>
-          </div>
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
@@ -967,7 +976,7 @@ const AdminVendorEdit: React.FC = () => {
                           <option value={1.5}>⭐⭐ 1.5 Stars (Poor)</option>
                           <option value={1.0}>⭐ 1.0 Star (Poor)</option>
                         </select>
-              </div>
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Review Date *</label>
                         <Input
@@ -975,8 +984,8 @@ const AdminVendorEdit: React.FC = () => {
                           type="date"
                           className="w-full"
                         />
-              </div>
-            </div>
+                      </div>
+                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Review Text *</label>
@@ -987,12 +996,12 @@ const AdminVendorEdit: React.FC = () => {
                         className="w-full"
                       />
                     </div>
-                    
+
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <span>This review will be visible on the vendor's public profile</span>
-              </div>
-            </div>
+                    </div>
+                  </div>
                 ))
               )}
             </CardContent>
@@ -1004,14 +1013,95 @@ const AdminVendorEdit: React.FC = () => {
               <CardTitle>Catalog Images</CardTitle>
             </CardHeader>
             <CardContent>
-              <ImageUpload
-                onUpload={handleImageUpload}
-                existingImages={catalogImages}
-                onToggleHighlight={handleToggleHighlight}
-                onDeleteImage={handleDeleteImage}
-                highlightStatus={currentHighlightStatus}
-                forceRefresh={forceRefresh}
-              />
+              {highlightMessage && (
+                <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md text-sm">
+                  {highlightMessage}
+                </div>
+              )}
+
+              {/* Existing Catalog Images Gallery */}
+              {catalogImagesWithMeta.length > 0 && (
+                <div className="mb-8">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">
+                    Existing Catalog Images ({catalogImagesWithMeta.length})
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {catalogImagesWithMeta.map((image, index) => (
+                      <div
+                        key={image.id || index}
+                        className={`relative group bg-white border rounded-lg p-2 ${image.is_highlighted ? 'border-yellow-400 shadow-md ring-1 ring-yellow-400' : 'border-gray-200'
+                          }`}
+                      >
+                        <Button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteImage(image.media_url);
+                          }}
+                          className="absolute top-1 right-1 z-10 w-8 h-8 p-0 hover:bg-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+
+                        <div className="aspect-video mb-3">
+                          <img
+                            src={image.media_url}
+                            alt={image.title || `Catalog image ${index + 1}`}
+                            className="w-full h-full object-cover rounded"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`highlight-${image.id}`}
+                              checked={Boolean(image.is_highlighted)}
+                              onChange={(e) => {
+                                handleToggleHighlight(image.media_url);
+                              }}
+                              className="h-4 w-4 text-yellow-600 focus:ring-yellow-500 border-gray-300 rounded"
+                            />
+                            <label
+                              htmlFor={`highlight-${image.id}`}
+                              className="text-sm text-gray-700 cursor-pointer"
+                            >
+                              Highlight
+                            </label>
+                          </div>
+                          {image.is_highlighted && (
+                            <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                              ⭐ Featured
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Image Upload Section */}
+              <div className="space-y-4">
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Upload New Images</h4>
+                  <ImageUpload
+                    vendorId={vendor?.vendor_id?.toString() || ''}
+                    category="catalog"
+                    maxImages={13}
+                    existingImages={catalogImages}
+                    onUploadComplete={handleImageUpload}
+                    onUploadError={(error) => {
+                      setHighlightMessage(`❌ Upload failed: ${error}`);
+                      setTimeout(() => setHighlightMessage(''), 5000);
+                    }}
+                    allowHighlight={true}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </form>

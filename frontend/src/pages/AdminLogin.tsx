@@ -32,10 +32,10 @@ const AdminLogin = () => {
       // Trim whitespace and check credentials
       const username = data.username?.trim();
       const password = data.password?.trim();
-      
+
       console.log("Checking credentials:", { username, password });
-      
-      if (username === "admin" && password === "123") {
+
+      if (username === "Admin" && password === "Admin@#123*") {
         // Store admin session
         localStorage.setItem("adminLoggedIn", "true");
         localStorage.setItem("adminUser", username);
@@ -43,7 +43,7 @@ const AdminLogin = () => {
         navigate("/admin/dashboard");
       } else {
         console.log("Login failed - invalid credentials");
-        setError("Invalid admin credentials. Use username: 'admin' and password: '123'");
+        setError("Invalid admin credentials.");
       }
       setIsLoading(false);
     }, 1000);
@@ -150,14 +150,7 @@ const AdminLogin = () => {
             </div>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-md">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">Demo Credentials:</h3>
-            <p className="text-xs text-gray-600">
-              <strong>Username:</strong> admin<br />
-              <strong>Password:</strong> 123
-            </p>
-          </div>
+
         </div>
       </div>
     </div>

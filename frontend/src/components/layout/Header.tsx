@@ -379,10 +379,10 @@ const Header = () => {
                             <div
                               key={notification.id}
                               className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${isVendorUpdate
-                                  ? 'bg-green-50 hover:bg-green-100'
-                                  : !notification.is_read
-                                    ? 'bg-orange-50'
-                                    : ''
+                                ? 'bg-green-50 hover:bg-green-100'
+                                : !notification.is_read
+                                  ? 'bg-orange-50'
+                                  : ''
                                 }`}
                             >
                               <div className="flex items-start justify-between gap-2">
@@ -816,7 +816,11 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
     try {
       const { customer, error } = await signIn(formData.email.trim(), formData.password);
       if (error) {
-        setErrors({ general: 'Invalid email or password' });
+        if (error.message?.includes('Invalid credentials') || error.message?.includes('JSON object requested')) {
+          setErrors({ general: 'Invalid email or password' });
+        } else {
+          setErrors({ general: error.message || 'An error occurred during login' });
+        }
       } else if (customer) {
         onClose();
         navigate('/');

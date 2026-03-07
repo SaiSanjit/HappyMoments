@@ -42,7 +42,7 @@ Service Account allows your app to upload to Google Drive without requiring user
 
 ```env
 # Existing configuration...
-VITE_SUPABASE_URL=https://hemofpnccbnfcmlibxbr.supabase.co
+VITE_SUPABASE_URL=https://api.happymomentsindia.com
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 VITE_GOOGLE_DRIVE_API_KEY=AIzaSyBsMX0piWSsVwzynEFBNUTSBVJMgFSWuCA

@@ -21,14 +21,14 @@ export interface Vendor {
   // Primary identification
   vendor_id: string
   slug: string
-  
+
   // Basic Brand Information
   brand_name: string
   spoc_name: string
   category: string | string[]  // Support both string (legacy) and array (new)
   categories?: string[]  // New array field for multiple categories
   subcategory?: string
-  
+
   // Contact Information
   phone_number: string
   alternate_number?: string  // Admin-only field, not visible in profile
@@ -37,13 +37,13 @@ export interface Vendor {
   instagram?: string
   address?: string
   google_maps_link?: string
-  
+
   // Business Details
   experience?: string
   quick_intro?: string
   caption?: string
   detailed_intro?: string
-  // highlight_features column was deleted from database
+  highlight_features?: string[]
   events_completed?: number
   rating?: number
   review_count?: number
@@ -52,17 +52,20 @@ export interface Vendor {
   starting_price?: number
   languages_spoken?: string[]  // Legacy field, kept for backward compatibility
   languages?: string[]  // New dedicated languages field
-  
-  // Media URLs - Removed deleted columns
-  // avatar_url, cover_image_url, brand_logo_url, contact_person_image_url columns were deleted from database
-  
+
+  // Media URLs - Added back for form compatibility
+  avatar_url?: string;
+  cover_image_url?: string;
+  brand_logo_url?: string;
+  contact_person_image_url?: string;
+
   // JSON Data Fields
   services?: any
   packages?: any
   deliverables?: string[]  // New deliverables field
   catalog_images?: string[]  // Catalog images field for edit form compatibility
   catalog_images_metadata?: any[]  // Catalog images metadata including highlight status
-  // customer_reviews column was deleted from database
+  customer_reviews?: any[]  // Added back for form compatibility
   booking_policies?: any
   additional_info?: {
     working_hours?: string;
@@ -75,7 +78,7 @@ export interface Vendor {
     }>;
     [key: string]: any;  // Allow any additional flexible fields
   }
-  
+
   // Timestamps
   created_at?: string
   updated_at?: string

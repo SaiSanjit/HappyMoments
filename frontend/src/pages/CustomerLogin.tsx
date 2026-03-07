@@ -12,12 +12,12 @@ const CustomerLogin: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signIn } = useCustomerAuth();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -51,13 +51,13 @@ const CustomerLogin: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setLoading(true);
-    
+
     try {
       const { customer, error } = await signIn(
         formData.email.trim(),
@@ -65,7 +65,7 @@ const CustomerLogin: React.FC = () => {
       );
 
       if (error) {
-        if (error.message?.includes('Invalid credentials') || error.message?.includes('No rows')) {
+        if (error.message?.includes('Invalid credentials') || error.message?.includes('No rows') || error.message?.includes('JSON object requested')) {
           setErrors({ general: 'Invalid email or password' });
         } else {
           setErrors({ general: error.message || 'An error occurred during login' });

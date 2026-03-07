@@ -47,6 +47,6 @@ Instead of password-based auth, you can use magic links:
 
 Make sure `.env.local` exists with:
 ```
-VITE_SUPABASE_URL=https://hemofpnccbnfcmlibxbr.supabase.co
+VITE_SUPABASE_URL=https://api.happymomentsindia.com
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
