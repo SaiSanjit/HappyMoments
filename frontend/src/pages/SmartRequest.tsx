@@ -14,6 +14,7 @@ import { ParsedRequest } from '../services/requestParser';
 import { MatchingResult, findBestMatches } from '../services/autoMatchingEngine';
 import { ExtractedEntities } from '../services/enhancedAudioEngine';
 import { createVendorFilterCriteria, searchVendorsWithFilters, VendorSearchResult } from '../services/enhancedVendorFiltering';
+import { saveContactVendor } from '../services/contactedVendorsApiService';
 import Header from '../components/layout/Header';
 
 const SmartRequest: React.FC = () => {
@@ -132,6 +133,14 @@ const SmartRequest: React.FC = () => {
     // Open WhatsApp or contact modal
     const phoneNumber = vendor.whatsapp_number || vendor.phone_number;
     if (phoneNumber) {
+      // Track contact if customer is logged in
+      if (customer && customer.id) {
+        console.log('Tracking contact for customer:', customer.id, 'vendor:', vendor.vendor_id);
+        saveContactVendor(customer.id, vendor.vendor_id.toString())
+          .then(result => console.log('Contact tracking result:', result))
+          .catch(err => console.error('Contact tracking error:', err));
+      }
+
       const message = `Hi ${vendor.spoc_name}! I found your ${vendor.category} services and I'm interested in learning more about your packages. Could you please share your availability and pricing details?`;
       const whatsappUrl = `https://wa.me/${phoneNumber.replace(/[^\d]/g, '')}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');

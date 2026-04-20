@@ -11,6 +11,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Vendor } from '../lib/supabase';
 import { getVendorByFieldId, getVendorMedia, getHighlightedCatalogImages, getAllCatalogImages, getCustomerReviews } from '../services/supabaseService';
+import { saveContactVendor } from '../services/contactedVendorsApiService';
 import AddReviewModal from '../components/AddReviewModal';
 import { useCustomerAuth } from '../contexts/CustomerAuthContext';
 
@@ -264,6 +265,14 @@ const VendorProfile = () => {
 
   // WhatsApp integration with friendly message
   const openWhatsApp = () => {
+    // Track contact if customer is logged in
+    if (customer && customer.id && vendor) {
+      console.log('Tracking contact for customer:', customer.id, 'vendor:', vendor.vendor_id);
+      saveContactVendor(customer.id, vendor.vendor_id.toString())
+        .then(result => console.log('Contact tracking result:', result))
+        .catch(err => console.error('Contact tracking error:', err));
+    }
+
     const message = `Hi [Name] I just saw your amazing work and I'm super interested in your wedding photography 📸
 
 💬 I'd love to talk with you and understand more before booking.
