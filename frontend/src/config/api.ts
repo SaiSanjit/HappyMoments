@@ -13,8 +13,11 @@ const isLocal =
   hostname.startsWith('10.') || 
   hostname.startsWith('172.');
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
+const rawUrl = import.meta.env.VITE_API_BASE_URL || 
   (isLocal ? 'http://localhost:3001' : '');
+
+export const API_BASE_URL = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
+
 
 if (!isLocal && !import.meta.env.VITE_API_BASE_URL) {
   console.error('⚠️ VITE_API_BASE_URL is not set in production! API calls will fail. Set it to your Express backend URL in Vercel environment variables.');

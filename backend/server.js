@@ -29,23 +29,10 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL,
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5174',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://localhost:8080',
-    'http://127.0.0.1:8080',
-    'https://happy-moments-eta.vercel.app',
-    'https://happymomentsindia.com',
-    'https://api.happymomentsindia.com',
-    /^https:\/\/happy-moments.*\.vercel\.app$/
-  ].filter(Boolean),
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    return callback(null, true);
+  },
   credentials: true
 }));
 

@@ -14,7 +14,7 @@ const parseVendorJsonFields = (vendorData: any): Vendor => {
       console.warn('Failed to parse services JSON:', e);
     }
   }
-  
+
   if (vendorData.packages && typeof vendorData.packages === 'string') {
     try {
       vendorData.packages = JSON.parse(vendorData.packages);
@@ -22,7 +22,7 @@ const parseVendorJsonFields = (vendorData: any): Vendor => {
       console.warn('Failed to parse packages JSON:', e);
     }
   }
-  
+
   if (vendorData.specialties && typeof vendorData.specialties === 'string') {
     try {
       vendorData.specialties = JSON.parse(vendorData.specialties);
@@ -30,9 +30,9 @@ const parseVendorJsonFields = (vendorData: any): Vendor => {
       console.warn('Failed to parse specialties JSON:', e);
     }
   }
-  
+
   // customer_reviews column was deleted from database - no processing needed
-  
+
   if (vendorData.booking_policies && typeof vendorData.booking_policies === 'string') {
     try {
       vendorData.booking_policies = JSON.parse(vendorData.booking_policies);
@@ -40,7 +40,7 @@ const parseVendorJsonFields = (vendorData: any): Vendor => {
       console.warn('Failed to parse booking_policies JSON:', e);
     }
   }
-  
+
   if (vendorData.additional_info && typeof vendorData.additional_info === 'string') {
     try {
       vendorData.additional_info = JSON.parse(vendorData.additional_info);
@@ -103,12 +103,12 @@ export const testConnection = async () => {
     const { data, error } = await supabase
       .from('vendors')
       .select('count', { count: 'exact' });
-    
+
     if (error) {
       console.error("Supabase connection test failed:", error);
       return false;
     }
-    
+
     console.log("Supabase connection successful. Vendor count:", data);
     return true;
   } catch (error) {
@@ -161,19 +161,19 @@ export const addVendor = async (vendorData: Omit<Vendor, 'created_at' | 'updated
   try {
     console.log("Attempting to add vendor with data:", vendorData);
     console.log("Address field specifically:", vendorData.address);
-    
+
     // Generate slug if not provided
     const slug = vendorData.slug || generateSlug(vendorData.brand_name);
-    
+
     // Remove vendor_id from the data to let the database auto-generate it
     const { vendor_id, ...dataWithoutVendorId } = vendorData;
-    
+
     // Add slug to the data
     const vendorDataWithSlug = {
       ...dataWithoutVendorId,
       slug: slug
     };
-    
+
     const { data, error } = await supabase
       .from('vendors')
       .insert([vendorDataWithSlug])
@@ -193,7 +193,7 @@ export const addVendor = async (vendorData: Omit<Vendor, 'created_at' | 'updated
 
     console.log("Vendor added successfully with ID:", data.vendor_id);
     console.log("Address field in stored data:", data.address);
-    
+
     // Create vendor credentials
     const password = generatePassword();
     const credentialsData = {
@@ -251,7 +251,7 @@ export const checkPhoneUnique = async (phone: string): Promise<boolean> => {
 export const getAllVendors = async (): Promise<Vendor[]> => {
   try {
     console.log('=== GET ALL VENDORS DEBUG ===');
-    
+
     const { data, error } = await supabase
       .from('vendors')
       .select('*')
@@ -300,21 +300,21 @@ export const getVendorsByCategory = async (category: CategoryName | string | any
   try {
     console.log('=== GET VENDORS BY CATEGORY DEBUG ===');
     console.log('Looking for category:', category);
-    
+
     // Get all valid category names from constants for exact matching
     const validCategoryNames = Object.values(CATEGORY_NAMES);
-    
+
     // Normalize the search category to match against valid category names
     const normalizeSearchCategory = (searchCat: string): string => {
       const lowerSearch = searchCat.toLowerCase().trim();
-      
+
       // Try exact match first (case-insensitive)
       for (const validName of validCategoryNames) {
         if (validName.toLowerCase() === lowerSearch) {
           return validName;
         }
       }
-      
+
       // Try normalized match (remove slashes and spaces)
       const normalizedSearch = lowerSearch.replace(/[\/\s]/g, '');
       for (const validName of validCategoryNames) {
@@ -323,14 +323,14 @@ export const getVendorsByCategory = async (category: CategoryName | string | any
           return validName;
         }
       }
-      
+
       // Return original if no match found
       return searchCat;
     };
-    
+
     const normalizedSearchCategory = normalizeSearchCategory(category);
     console.log('Normalized search category:', normalizedSearchCategory);
-    
+
     // Fetch all vendors first to avoid URL encoding issues with special characters
     const { data: allVendors, error: fetchError } = await supabase
       .from('vendors')
@@ -347,23 +347,23 @@ export const getVendorsByCategory = async (category: CategoryName | string | any
       return [];
     }
 
-      // Log unique categories to help debug
+    // Log unique categories to help debug
     const uniqueCategories = [...new Set(allVendors.map(v => {
       const cats = Array.isArray(v.category) ? v.category : (v.categories || (v.category ? [v.category] : []));
       return cats;
     }).flat())];
-      console.log('Unique categories found in database:', uniqueCategories);
-      
+    console.log('Unique categories found in database:', uniqueCategories);
+
     // Filter vendors by category - check if vendor has the category in their categories array
-      const filteredVendors = allVendors.filter(vendor => {
+    const filteredVendors = allVendors.filter(vendor => {
       // Get all categories for this vendor (handle both string and array formats)
       const vendorCategories: string[] = [];
-      
+
       // Check categories field first (new array field)
       if (vendor.categories && Array.isArray(vendor.categories)) {
         vendorCategories.push(...vendor.categories.filter(c => typeof c === 'string'));
       }
-      
+
       // Check category field (legacy - can be string or array)
       if (vendor.category) {
         if (Array.isArray(vendor.category)) {
@@ -372,52 +372,52 @@ export const getVendorsByCategory = async (category: CategoryName | string | any
           vendorCategories.push(vendor.category);
         }
       }
-      
+
       if (vendorCategories.length === 0) {
         return false;
       }
-      
+
       // Check if any of the vendor's categories match the search category
       const hasMatch = vendorCategories.some(vendorCat => {
         const vendorCatStr = String(vendorCat).trim();
         const searchCatStr = normalizedSearchCategory.trim();
-          
-          // Exact match (case-insensitive)
+
+        // Exact match (case-insensitive)
         if (vendorCatStr.toLowerCase() === searchCatStr.toLowerCase()) {
-            return true;
-          }
-          
+          return true;
+        }
+
         // Normalized match (remove slashes, spaces, case)
         const normalizedVendor = vendorCatStr.toLowerCase().replace(/[\/\s]/g, '');
         const normalizedSearch = searchCatStr.toLowerCase().replace(/[\/\s]/g, '');
-          
-          if (normalizedVendor === normalizedSearch) {
-            return true;
-          }
-          
+
+        if (normalizedVendor === normalizedSearch) {
+          return true;
+        }
+
         // Also check if vendor category matches any valid category name that matches search
         for (const validName of validCategoryNames) {
           const validLower = validName.toLowerCase();
           const searchLower = searchCatStr.toLowerCase();
-          
+
           // If search category matches this valid name, check if vendor has this valid name
           if (validLower === searchLower || validLower.replace(/[\/\s]/g, '') === searchLower.replace(/[\/\s]/g, '')) {
-            if (vendorCatStr.toLowerCase() === validLower || 
-                vendorCatStr.toLowerCase().replace(/[\/\s]/g, '') === validLower.replace(/[\/\s]/g, '')) {
+            if (vendorCatStr.toLowerCase() === validLower ||
+              vendorCatStr.toLowerCase().replace(/[\/\s]/g, '') === validLower.replace(/[\/\s]/g, '')) {
               return true;
             }
           }
-          }
-          
-          return false;
-        });
-        
-        return hasMatch;
+        }
+
+        return false;
       });
-      
+
+      return hasMatch;
+    });
+
     console.log(`Filtered ${filteredVendors.length} vendors for category "${category}" (normalized: "${normalizedSearchCategory}")`);
-      
-      if (filteredVendors.length > 0) {
+
+    if (filteredVendors.length > 0) {
       console.log('Sample vendors found:', filteredVendors.slice(0, 3).map(v => {
         const cats = Array.isArray(v.category) ? v.category : (v.categories || (v.category ? [v.category] : []));
         return {
@@ -425,34 +425,34 @@ export const getVendorsByCategory = async (category: CategoryName | string | any
           categories: cats
         };
       }));
+    }
+
+    // Parse JSON fields and ensure rating is properly handled
+    const parsedVendors = filteredVendors.map(vendor => {
+      const parsed = parseVendorJsonFields(vendor);
+
+      // Ensure rating is a number
+      if (parsed.rating !== null && parsed.rating !== undefined) {
+        if (typeof parsed.rating === 'string') {
+          // Handle string ratings like "4/5" or "4" or "4.0"
+          const numStr = String(parsed.rating).split('/')[0].trim();
+          parsed.rating = parseFloat(numStr) || 0;
+        }
       }
-      
-      // Parse JSON fields and ensure rating is properly handled
-      const parsedVendors = filteredVendors.map(vendor => {
-        const parsed = parseVendorJsonFields(vendor);
-        
-        // Ensure rating is a number
-        if (parsed.rating !== null && parsed.rating !== undefined) {
-          if (typeof parsed.rating === 'string') {
-            // Handle string ratings like "4/5" or "4" or "4.0"
-            const numStr = String(parsed.rating).split('/')[0].trim();
-            parsed.rating = parseFloat(numStr) || 0;
-          }
-        }
-        
-        // Debug logging for Siva Events
-        if (parsed.brand_name && parsed.brand_name.toLowerCase().includes('siva')) {
-          console.log('🔍 Siva Events in getVendorsByCategory:', {
-            brand_name: parsed.brand_name,
-            rating: parsed.rating,
-            ratingType: typeof parsed.rating
-          });
-        }
-        
-        return parsed;
-      });
-      
-      return parsedVendors as Vendor[];
+
+      // Debug logging for Siva Events
+      if (parsed.brand_name && parsed.brand_name.toLowerCase().includes('siva')) {
+        console.log('🔍 Siva Events in getVendorsByCategory:', {
+          brand_name: parsed.brand_name,
+          rating: parsed.rating,
+          ratingType: typeof parsed.rating
+        });
+      }
+
+      return parsed;
+    });
+
+    return parsedVendors as Vendor[];
   } catch (error) {
     console.error('Error fetching vendors by category:', error);
     return [];
@@ -479,7 +479,7 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
 
     // Get all valid category names from constants
     const validCategoryNames = Object.values(CATEGORY_NAMES) as string[];
-    
+
     // Initialize counts for all categories
     const counts: Record<string, number> = {};
     validCategoryNames.forEach(catName => {
@@ -489,9 +489,9 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
     // Helper to check if a category string matches any valid category name
     const matchesCategory = (categoryValue: string | string[] | null | undefined): string[] => {
       const matchedCategories: string[] = [];
-      
+
       if (!categoryValue) return matchedCategories;
-      
+
       // Handle array format
       if (Array.isArray(categoryValue)) {
         categoryValue.forEach(cat => {
@@ -501,7 +501,7 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
         });
         return matchedCategories;
       }
-      
+
       // Handle string format
       if (typeof categoryValue === 'string') {
         // Check for exact match first
@@ -509,7 +509,7 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
           matchedCategories.push(categoryValue);
           return matchedCategories;
         }
-        
+
         // Try case-insensitive match
         const lowerValue = categoryValue.toLowerCase().trim();
         validCategoryNames.forEach(validName => {
@@ -518,7 +518,7 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
           }
         });
       }
-      
+
       return matchedCategories;
     };
 
@@ -527,10 +527,10 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
       // Check both category and categories fields
       const categoryMatches = matchesCategory(vendor.category);
       const categoriesMatches = matchesCategory(vendor.categories);
-      
+
       // Combine and deduplicate matches
       const allMatches = [...new Set([...categoryMatches, ...categoriesMatches])];
-      
+
       // Increment count for each matched category
       allMatches.forEach(catName => {
         counts[catName] = (counts[catName] || 0) + 1;
@@ -553,12 +553,12 @@ export const getVendorMedia = async (vendorId: number | string, category?: strin
     // Convert vendorId to string to match database column type
     const vendorIdStr = typeof vendorId === 'number' ? vendorId.toString() : vendorId;
     const vendorIdNum = typeof vendorId === 'string' ? parseInt(vendorId) : vendorId;
-    
+
     console.log(`=== FETCHING VENDOR MEDIA ===`);
     console.log(`Vendor ID (string): ${vendorIdStr}`);
     console.log(`Vendor ID (number): ${vendorIdNum}`);
     console.log(`Category: ${category || 'all'}`);
-    
+
     // Try querying with string first
     let query = supabase
       .from('vendor_media')
@@ -597,18 +597,18 @@ export const getVendorMedia = async (vendorId: number | string, category?: strin
       console.error('❌ Error fetching vendor media:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
       console.error('Query details - vendor_id:', vendorIdStr, 'category:', category);
-      
+
       // Try a raw query to see what's in the table
       const { data: allData, error: allError } = await supabase
         .from('vendor_media')
         .select('vendor_id, category, media_url')
         .limit(10);
-      
+
       if (!allError && allData) {
         console.log('Sample vendor_media records:', allData);
         console.log('Sample vendor_id types:', allData.map(d => ({ vendor_id: d.vendor_id, type: typeof d.vendor_id })));
       }
-      
+
       return [];
     }
 
@@ -645,7 +645,7 @@ export const getVendorMedia = async (vendorId: number | string, category?: strin
 export const getHighlightedCatalogImages = async (vendorId: number): Promise<any[]> => {
   try {
     console.log(`Getting highlighted catalog images for vendor ${vendorId}`);
-    
+
     // First get the vendor data to access catalog_images_metadata
     const { data: vendorData, error: vendorError } = await supabase
       .from('vendors')
@@ -669,7 +669,7 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
     const possibleBuckets = ['catalog-images', 'vendor-images', 'images', 'media'];
     let allStorageImages: any[] = [];
     const vendorIdStr = vendorId.toString();
-    
+
     for (const bucket of possibleBuckets) {
       const storageImages = await getVendorCatalogImagesFromStorage(vendorId, bucket);
       if (storageImages.length > 0) {
@@ -681,11 +681,11 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
           }
           return urlContainsVendorId;
         });
-        
+
         if (vendorSpecificImages.length > 0) {
           allStorageImages = vendorSpecificImages;
           console.log(`✅ Found ${vendorSpecificImages.length} vendor-specific catalog images in bucket ${bucket}`);
-        break;
+          break;
         } else {
           console.warn(`⚠️ No vendor-specific images found in bucket ${bucket}, trying next bucket...`);
         }
@@ -700,8 +700,8 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
 
     // Match storage images with metadata and filter highlighted ones
     const highlightedImages = allStorageImages.filter(storageImg => {
-      const metadataEntry = metadata.find((meta: any) => 
-        meta.filename === storageImg.name || 
+      const metadataEntry = metadata.find((meta: any) =>
+        meta.filename === storageImg.name ||
         meta.media_url === storageImg.url ||
         meta.id === storageImg.id
       );
@@ -709,7 +709,7 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
     });
 
     console.log('Highlighted images found:', highlightedImages.length);
-    
+
     // Transform storage images to the format expected by VendorProfile
     const transformedHighlightedImages = highlightedImages.map(img => ({
       id: img.id,
@@ -723,7 +723,7 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
       updated_at: img.updated_at,
       metadata: img.metadata
     }));
-    
+
     // If no highlighted images, return first 3 storage images as fallback
     if (transformedHighlightedImages.length === 0) {
       console.log('No highlighted images, returning first 3 storage images as fallback');
@@ -741,7 +741,7 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
       }));
       return fallbackImages;
     }
-    
+
     return transformedHighlightedImages;
 
   } catch (error) {
@@ -754,11 +754,11 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
 export const getAllCatalogImages = async (vendorId: number): Promise<any[]> => {
   try {
     console.log(`Getting ALL catalog images for vendor ${vendorId}`);
-    
+
     // Get all catalog images from storage buckets - ONLY from vendor-specific folder
     const possibleBuckets = ['catalog-images', 'vendor-images', 'images', 'media'];
     let allStorageImages: any[] = [];
-    
+
     for (const bucket of possibleBuckets) {
       const storageImages = await getVendorCatalogImagesFromStorage(vendorId, bucket);
       if (storageImages.length > 0) {
@@ -771,11 +771,11 @@ export const getAllCatalogImages = async (vendorId: number): Promise<any[]> => {
           }
           return urlContainsVendorId;
         });
-        
+
         if (vendorSpecificImages.length > 0) {
           allStorageImages = vendorSpecificImages;
           console.log(`✅ Found ${vendorSpecificImages.length} vendor-specific catalog images in bucket ${bucket}`);
-        break;
+          break;
         } else {
           console.warn(`⚠️ No vendor-specific images found in bucket ${bucket}, trying next bucket...`);
         }
@@ -797,7 +797,7 @@ export const getAllCatalogImages = async (vendorId: number): Promise<any[]> => {
       updated_at: img.updated_at,
       metadata: img.metadata
     }));
-    
+
     console.log('Transformed catalog images:', transformedImages.length);
     return transformedImages;
 
@@ -908,7 +908,7 @@ export const getCustomerReviews = async (vendorId: string): Promise<any[]> => {
 export const toggleImageHighlight = async (imageId: string, isHighlighted: boolean): Promise<boolean> => {
   try {
     console.log(`Toggling highlight for image ${imageId} to ${isHighlighted}`);
-    
+
     // If trying to highlight, check if vendor already has 3 highlighted images
     if (isHighlighted) {
       const { data: image, error: imageError } = await supabase
@@ -963,7 +963,7 @@ export const toggleImageHighlight = async (imageId: string, isHighlighted: boole
 export const updateVendorVerified = async (vendorId: string, verified: boolean): Promise<boolean> => {
   try {
     console.log('Testing verified update for vendor:', vendorId, 'verified:', verified);
-    
+
     const { data, error } = await supabase
       .from('vendors')
       .update({ verified })
@@ -994,7 +994,7 @@ export const updateVendor = async (vendorId: string, vendorData: Partial<Vendor>
   try {
     console.log('Updating vendor with ID:', vendorId);
     console.log('Vendor data to update:', vendorData);
-    
+
     // Define allowed fields for update (based on actual database schema)
     const allowedFields = [
       'brand_name', 'spoc_name', 'category', 'categories', 'subcategory',  // categories is now supported
@@ -1004,7 +1004,7 @@ export const updateVendor = async (vendorId: string, vendorData: Partial<Vendor>
       'rating', 'review_count',  // Rating fields
       'services', 'packages', 'deliverables', 'booking_policies', 'additional_info'
     ];
-    
+
     // Filter data to only include allowed fields
     // Note: email and alternate_number can be empty strings (optional fields)
     const cleanedData = Object.fromEntries(
@@ -1018,14 +1018,14 @@ export const updateVendor = async (vendorId: string, vendorData: Partial<Vendor>
         return true;
       })
     );
-    
+
     console.log('Cleaned vendor data:', cleanedData);
-    
+
     if (Object.keys(cleanedData).length === 0) {
       console.log('No valid fields to update');
       return true; // Nothing to update, consider it successful
     }
-    
+
     const { data, error } = await supabase
       .from('vendors')
       .update(cleanedData)
@@ -1118,7 +1118,7 @@ export const updateVendorCatalogImages = async (vendorId: string, imageUrls: str
   try {
     console.log('Updating catalog images for vendor:', vendorId);
     console.log('New image URLs:', imageUrls);
-    
+
     // First, get existing catalog images to preserve highlight status
     const { data: existingImages, error: fetchError } = await supabase
       .from('vendor_media')
@@ -1186,7 +1186,7 @@ export const updateVendorCatalogImages = async (vendorId: string, imageUrls: str
 };
 
 // Vendor Authentication Functions
-export const vendorLogin = async (username: string, password: string): Promise<{success: boolean, vendor?: Vendor, message?: string}> => {
+export const vendorLogin = async (username: string, password: string): Promise<{ success: boolean, vendor?: Vendor, message?: string }> => {
   try {
     // Simple login check against vendor_credentials table
     const { data, error } = await supabase
@@ -1211,10 +1211,10 @@ export const vendorLogin = async (username: string, password: string): Promise<{
       .update({ last_login: new Date().toISOString() })
       .eq('vendor_id', data.vendor_id);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       vendor: parseVendorJsonFields(data.vendors),
-      message: 'Login successful' 
+      message: 'Login successful'
     };
   } catch (error) {
     console.error('Error during vendor login:', error);
@@ -1255,14 +1255,14 @@ export const refreshVendorSession = async (): Promise<Vendor | null> => {
 
     console.log('Refreshing vendor session data...');
     const freshVendorData = await getVendorByFieldId(currentVendor.vendor_id);
-    
+
     if (freshVendorData) {
       // Update localStorage with fresh data
       saveVendorSession(freshVendorData);
       console.log('Vendor session refreshed with latest data');
       return freshVendorData;
     }
-    
+
     return currentVendor; // Return current data if refresh fails
   } catch (error) {
     console.error('Error refreshing vendor session:', error);
@@ -1272,11 +1272,11 @@ export const refreshVendorSession = async (): Promise<Vendor | null> => {
 
 // Vendor Profile Change Workflow Functions
 export const submitVendorProfileChange = async (
-  vendorId: number, 
-  changeType: string, 
-  currentData: any, 
+  vendorId: number,
+  changeType: string,
+  currentData: any,
   proposedChanges: any
-): Promise<{success: boolean, changeId?: number, message?: string}> => {
+): Promise<{ success: boolean, changeId?: number, message?: string }> => {
   try {
     const { data, error } = await supabase
       .from('vendor_profile_changes')
@@ -1295,10 +1295,10 @@ export const submitVendorProfileChange = async (
       return { success: false, message: 'Failed to submit changes for approval' };
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       changeId: data.id,
-      message: 'Changes submitted for admin approval' 
+      message: 'Changes submitted for admin approval'
     };
   } catch (error) {
     console.error('Error submitting profile change:', error);
@@ -1333,7 +1333,7 @@ export const getVendorRejectedChanges = async (vendorId: number): Promise<any[]>
   try {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     // First, get the most recent rejected change
     const { data: rejectedData, error: rejectedError } = await supabase
       .from('vendor_profile_changes')
@@ -1386,10 +1386,10 @@ export const getVendorRejectedChanges = async (vendorId: number): Promise<any[]>
 };
 
 // Clear hardcoded services from vendor (admin function)
-export const clearVendorHardcodedServices = async (vendorId: string): Promise<{success: boolean, message?: string}> => {
+export const clearVendorHardcodedServices = async (vendorId: string): Promise<{ success: boolean, message?: string }> => {
   try {
     console.log('Clearing hardcoded services for vendor:', vendorId);
-    
+
     // Get current vendor data
     const { data: currentVendor, error: fetchError } = await supabase
       .from('vendors')
@@ -1614,7 +1614,7 @@ export const markAllNotificationsAsRead = async (vendorId: number): Promise<bool
 export const getCustomerNotifications = async (customerId: number, unreadOnly: boolean = false): Promise<any[]> => {
   try {
     console.log(`🔔 Fetching customer notifications for customer ID: ${customerId}`);
-    
+
     let query = supabase
       .from('contacted_vendors')
       .select(`
@@ -1672,7 +1672,7 @@ export const getCustomerNotifications = async (customerId: number, unreadOnly: b
     const transformedData = (data || []).map(contact => {
       const vendor = vendorDetails[parseInt(contact.vendor_id)];
       const vendorName = vendor?.brand_name || `Vendor ${contact.vendor_id}`;
-      
+
       // Determine the message based on notification type:
       // - If notification_message contains "updated your status", it's a vendor status update - use stored message
       // - Otherwise, it's an initial contact - generate "You contacted {Vendor Name}"
@@ -1684,7 +1684,7 @@ export const getCustomerNotifications = async (customerId: number, unreadOnly: b
         // This is an initial contact - generate customer-specific message
         customerMessage = `You contacted ${vendorName}`;
       }
-      
+
       return {
         id: contact.contact_id,
         vendor_id: contact.vendor_id,
@@ -1805,7 +1805,7 @@ export const reviewVendorProfileChange = async (
   status: 'approved' | 'rejected',
   adminUsername: string,
   adminComments?: string
-): Promise<{success: boolean, message?: string}> => {
+): Promise<{ success: boolean, message?: string }> => {
   try {
     // Get the change record first
     const { data: changeRecord, error: fetchError } = await supabase
@@ -1839,7 +1839,7 @@ export const reviewVendorProfileChange = async (
     // If approved, apply changes to vendors table
     if (status === 'approved') {
       let proposedChanges = changeRecord.proposed_changes;
-      
+
       // CRITICAL: If proposed_changes is a string (JSON), parse it
       if (typeof proposedChanges === 'string') {
         try {
@@ -1849,12 +1849,12 @@ export const reviewVendorProfileChange = async (
           return { success: false, message: 'Invalid proposed changes format' };
         }
       }
-      
+
       console.log('Applying changes to vendor:', changeRecord.vendor_id);
       console.log('Proposed changes (raw):', proposedChanges);
       console.log('Proposed changes category type:', typeof proposedChanges?.category, 'IsArray:', Array.isArray(proposedChanges?.category));
       console.log('Proposed changes categories type:', typeof proposedChanges?.categories, 'IsArray:', Array.isArray(proposedChanges?.categories));
-      
+
       // First check if vendor exists and get current data
       const { data: existingVendor, error: fetchVendorError } = await supabase
         .from('vendors')
@@ -1872,7 +1872,7 @@ export const reviewVendorProfileChange = async (
       // Clean and validate the proposed changes
       // CRITICAL: Don't copy directly - we need to normalize category/categories first
       const cleanedChanges: any = {};
-      
+
       // CRITICAL: Normalize category/categories FIRST before any other processing
       // This ensures arrays are always arrays, never strings
       const normalizeCategoryField = (field: any): string[] => {
@@ -1900,22 +1900,22 @@ export const reviewVendorProfileChange = async (
           return [];
         }
       };
-      
+
       // Copy all fields EXCEPT category/categories (we'll handle those separately)
       Object.keys(proposedChanges).forEach(key => {
         if (key !== 'category' && key !== 'categories') {
           cleanedChanges[key] = proposedChanges[key];
         }
       });
-      
+
       // Normalize both category and categories fields - prioritize categories if it exists
       let normalizedCategories: string[] = [];
-      
+
       // DEBUG: Log raw values from proposedChanges
       console.log('=== RAW proposedChanges DEBUG ===');
       console.log('proposedChanges.categories:', proposedChanges.categories, 'Type:', typeof proposedChanges.categories, 'IsArray:', Array.isArray(proposedChanges.categories));
       console.log('proposedChanges.category:', proposedChanges.category, 'Type:', typeof proposedChanges.category, 'IsArray:', Array.isArray(proposedChanges.category));
-      
+
       if (proposedChanges.categories !== undefined && proposedChanges.categories !== null) {
         normalizedCategories = normalizeCategoryField(proposedChanges.categories);
         console.log('Normalized from categories field:', proposedChanges.categories, 'Type:', typeof proposedChanges.categories, '->', normalizedCategories, 'IsArray:', Array.isArray(normalizedCategories));
@@ -1923,48 +1923,48 @@ export const reviewVendorProfileChange = async (
         normalizedCategories = normalizeCategoryField(proposedChanges.category);
         console.log('Normalized from category field:', proposedChanges.category, 'Type:', typeof proposedChanges.category, '->', normalizedCategories, 'IsArray:', Array.isArray(normalizedCategories));
       }
-      
+
       // CRITICAL: Ensure normalizedCategories is ALWAYS an array
       if (!Array.isArray(normalizedCategories)) {
         console.error('ERROR: normalizedCategories is not an array after normalization! Value:', normalizedCategories);
         normalizedCategories = [];
       }
-      
+
       // Set categories as array (ALWAYS) - even if empty
       // Create a fresh array copy to avoid any reference issues
       cleanedChanges.categories = Array.isArray(normalizedCategories) ? [...normalizedCategories] : [];
       // Also set category as first item (string) for backward compatibility (but we won't use this in update)
       cleanedChanges.category = normalizedCategories.length > 0 ? normalizedCategories[0] : '';
-      
+
       console.log('After normalization - categories:', cleanedChanges.categories, 'IsArray:', Array.isArray(cleanedChanges.categories), 'Type:', typeof cleanedChanges.categories);
       console.log('After normalization - category:', cleanedChanges.category);
-      
+
       // FINAL CHECK: If categories is somehow not an array, force it to empty array
       if (!Array.isArray(cleanedChanges.categories)) {
         console.error('CRITICAL: cleanedChanges.categories is NOT an array after setting! Forcing to empty array.');
         cleanedChanges.categories = [];
       }
-      
+
       // Remove any fields that shouldn't be updated or don't exist in vendors table
       delete cleanedChanges.id;
       delete cleanedChanges.vendor_id;
       delete cleanedChanges.created_at;
-      
+
       // Handle catalog_images separately - don't try to update in vendors table
       const catalogImages = cleanedChanges.catalog_images;
       delete cleanedChanges.catalog_images;
-      
+
       // Handle highlight_status_changes separately - don't try to update in vendors table
       const highlightStatusChanges = cleanedChanges.highlight_status_changes;
       delete cleanedChanges.highlight_status_changes;
-      
+
       // Handle brand_logo_url and contact_person_image_url separately - these are stored in vendor_media table
       const brandLogoUrl = cleanedChanges.brand_logo_url;
       delete cleanedChanges.brand_logo_url;
-      
+
       const contactPersonImageUrl = cleanedChanges.contact_person_image_url;
       delete cleanedChanges.contact_person_image_url;
-      
+
       // Limit highlight_features to max 4 items
       if (cleanedChanges.highlight_features && Array.isArray(cleanedChanges.highlight_features)) {
         cleanedChanges.highlight_features = cleanedChanges.highlight_features
@@ -1972,7 +1972,7 @@ export const reviewVendorProfileChange = async (
           .slice(0, 4)
           .map((f: string) => f.trim());
       }
-      
+
       // Final safety check: Ensure categories is ALWAYS an array before database update
       // This is a last-ditch effort to prevent "malformed array literal" errors
       if (cleanedChanges.categories !== undefined) {
@@ -1992,16 +1992,16 @@ export const reviewVendorProfileChange = async (
             .map((cat: string) => cat.trim());
         }
       }
-      
+
       // Debug log to verify categories is an array
       console.log('Final categories before DB update:', cleanedChanges.categories, 'Type:', typeof cleanedChanges.categories, 'IsArray:', Array.isArray(cleanedChanges.categories));
-      
+
       // ABSOLUTE FINAL CHECK: If categories exists and is not an array, remove it
       if (cleanedChanges.categories !== undefined && !Array.isArray(cleanedChanges.categories)) {
         console.error('ABSOLUTE FINAL CHECK FAILED: Removing categories to prevent database error');
         delete cleanedChanges.categories;
       }
-      
+
       // FINAL SAFETY CHECK: Remove categories from update if it's not a valid array
       // This prevents "malformed array literal" errors
       if (cleanedChanges.categories !== undefined) {
@@ -2022,7 +2022,7 @@ export const reviewVendorProfileChange = async (
           cleanedChanges.categories = cleanedChanges.categories
             .filter((cat: any) => cat && typeof cat === 'string' && cat.trim() !== '')
             .map((cat: string) => cat.trim());
-          
+
           // If array is empty, we can either set it to empty array or remove it
           // For now, let's set it to empty array (PostgreSQL accepts empty arrays)
           if (cleanedChanges.categories.length === 0) {
@@ -2030,7 +2030,7 @@ export const reviewVendorProfileChange = async (
           }
         }
       }
-      
+
       // Convert arrays to proper format if needed
       if (cleanedChanges.deliverables && Array.isArray(cleanedChanges.deliverables)) {
         cleanedChanges.deliverables = cleanedChanges.deliverables.filter(item => item && item.trim() !== '');
@@ -2043,14 +2043,14 @@ export const reviewVendorProfileChange = async (
       const updatePayload: any = {
         updated_at: new Date().toISOString()
       };
-      
+
       // Copy all fields one by one, with special handling for category/categories
       Object.keys(cleanedChanges).forEach(key => {
         // Skip category field - we only use categories (array)
         if (key === 'category') {
           return; // Don't include category string field
         }
-        
+
         if (key === 'categories') {
           // CRITICAL: Only include categories if it's a valid array
           if (Array.isArray(cleanedChanges.categories) && cleanedChanges.categories.length > 0) {
@@ -2073,7 +2073,7 @@ export const reviewVendorProfileChange = async (
           updatePayload[key] = cleanedChanges[key];
         }
       });
-      
+
       // ABSOLUTE FINAL CHECK: Remove categories if it's not an array
       if (updatePayload.categories !== undefined) {
         if (!Array.isArray(updatePayload.categories)) {
@@ -2088,7 +2088,7 @@ export const reviewVendorProfileChange = async (
           }
         }
       }
-      
+
       console.log('FINAL update payload before DB:', JSON.stringify(updatePayload, null, 2));
       console.log('Categories in payload:', updatePayload.categories, 'IsArray:', Array.isArray(updatePayload.categories), 'Type:', typeof updatePayload.categories);
 
@@ -2110,24 +2110,24 @@ export const reviewVendorProfileChange = async (
         console.log('Vendor ID:', changeRecord.vendor_id);
         console.log('Catalog images data:', catalogImages);
         console.log('Catalog images type:', typeof catalogImages);
-        
+
         try {
           // Import storage service
           const { deleteImageFromStorage, getVendorCatalogImagesFromStorage } = await import('./supabaseStorageService');
-          
+
           // Handle new structured format (added/removed)
           if (typeof catalogImages === 'object' && catalogImages.added && catalogImages.removed) {
             console.log('Processing structured catalog images format');
             console.log('Added images:', catalogImages.added);
             console.log('Removed images:', catalogImages.removed);
-            
+
             // Delete removed images from storage
             if (catalogImages.removed && catalogImages.removed.length > 0) {
               console.log(`Deleting ${catalogImages.removed.length} removed images from storage...`);
-              
+
               const possibleBuckets = ['catalog-images', 'vendor-images', 'images', 'media'];
               const vendorIdStr = changeRecord.vendor_id.toString();
-              
+
               for (const removedUrl of catalogImages.removed) {
                 // Extract file path from URL
                 let filePath = '';
@@ -2148,7 +2148,7 @@ export const reviewVendorProfileChange = async (
                   const filename = removedUrl.split('/').pop();
                   filePath = `${vendorIdStr}/catalog/${filename}`;
                 }
-                
+
                 // Try deleting from each possible bucket
                 let deleted = false;
                 for (const bucket of possibleBuckets) {
@@ -2159,25 +2159,25 @@ export const reviewVendorProfileChange = async (
                     break;
                   }
                 }
-                
+
                 if (!deleted) {
                   console.warn(`⚠️ Could not delete ${removedUrl} from storage`);
                 }
               }
             }
-            
+
             // Added images should already be in storage from upload, so no action needed
             if (catalogImages.added && catalogImages.added.length > 0) {
               console.log(`✅ ${catalogImages.added.length} new images added (already in storage from upload)`);
             }
-            
+
           } else if (Array.isArray(catalogImages)) {
             // Handle legacy array format - get current images and delete ones not in new array
             console.log('Processing legacy array format');
-            
+
             const possibleBuckets = ['catalog-images', 'vendor-images', 'images', 'media'];
             const vendorIdStr = changeRecord.vendor_id.toString();
-            
+
             // Get current images from storage
             let currentStorageImages: any[] = [];
             for (const bucket of possibleBuckets) {
@@ -2187,13 +2187,13 @@ export const reviewVendorProfileChange = async (
                 break;
               }
             }
-            
+
             const currentUrls = currentStorageImages.map(img => img.url);
             const newUrls = catalogImages;
-            
+
             // Find images to delete (in current but not in new)
             const toDelete = currentUrls.filter(url => !newUrls.includes(url));
-            
+
             if (toDelete.length > 0) {
               console.log(`Deleting ${toDelete.length} removed images from storage...`);
               for (const removedUrl of toDelete) {
@@ -2204,7 +2204,7 @@ export const reviewVendorProfileChange = async (
                   const bucketIndex = pathParts.findIndex(part => possibleBuckets.includes(part));
                   if (bucketIndex !== -1 && bucketIndex < pathParts.length - 1) {
                     filePath = pathParts.slice(bucketIndex + 1).join('/');
-            } else {
+                  } else {
                     const filename = pathParts[pathParts.length - 1];
                     filePath = `${vendorIdStr}/catalog/${filename}`;
                   }
@@ -2212,7 +2212,7 @@ export const reviewVendorProfileChange = async (
                   const filename = removedUrl.split('/').pop();
                   filePath = `${vendorIdStr}/catalog/${filename}`;
                 }
-                
+
                 let deleted = false;
                 for (const bucket of possibleBuckets) {
                   const deleteResult = await deleteImageFromStorage(filePath, bucket);
@@ -2222,7 +2222,7 @@ export const reviewVendorProfileChange = async (
                     break;
                   }
                 }
-                
+
                 if (!deleted) {
                   console.warn(`⚠️ Could not delete ${removedUrl} from storage`);
                 }
@@ -2232,9 +2232,9 @@ export const reviewVendorProfileChange = async (
             console.log('Unknown catalog images format, skipping update');
             return { success: true, message: 'Changes approved but catalog images format not recognized' };
           }
-          
+
           console.log('✅ Catalog images updated successfully in storage');
-          
+
         } catch (catalogError) {
           console.error('❌ Error updating catalog images:', catalogError);
           // Don't fail the entire approval, just log the error
@@ -2249,7 +2249,7 @@ export const reviewVendorProfileChange = async (
         console.log('=== UPDATING BRAND LOGO IN VENDOR_MEDIA ===');
         console.log('Vendor ID:', changeRecord.vendor_id);
         console.log('Brand logo URL:', brandLogoUrl);
-        
+
         try {
           // Get ALL existing brand logos (to delete old files from storage)
           const { data: existingLogos, error: fetchError } = await supabase
@@ -2257,21 +2257,21 @@ export const reviewVendorProfileChange = async (
             .select('id, media_url, gdrive_file_id')
             .eq('vendor_id', changeRecord.vendor_id.toString())
             .eq('category', 'brand_logo');
-            
+
           if (fetchError && fetchError.code !== 'PGRST116') {
             console.error('Error fetching existing brand logos:', fetchError);
           }
-          
+
           // Delete old brand logo files from storage
           if (existingLogos && existingLogos.length > 0) {
             console.log(`Found ${existingLogos.length} existing brand logo(s), deleting old files from storage...`);
-            
+
             for (const logo of existingLogos) {
               // Extract file path from media_url
               // URL format: https://...supabase.co/storage/v1/object/public/vendor-images/14/brand_logo/brand_logo_123.jpg
               // Extract: 14/brand_logo/brand_logo_123.jpg
               let filePath: string | null = null;
-              
+
               if (logo.media_url) {
                 const urlMatch = logo.media_url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
                 if (urlMatch) {
@@ -2281,13 +2281,13 @@ export const reviewVendorProfileChange = async (
                   filePath = logo.gdrive_file_id;
                 }
               }
-              
+
               if (filePath) {
                 console.log(`Deleting old brand logo file from storage: ${filePath}`);
                 const { error: storageDeleteError } = await supabase.storage
                   .from('vendor-images')
                   .remove([filePath]);
-                  
+
                 if (storageDeleteError) {
                   console.warn(`Could not delete file ${filePath} from storage:`, storageDeleteError);
                   // Continue anyway - file might not exist or already deleted
@@ -2295,13 +2295,13 @@ export const reviewVendorProfileChange = async (
                   console.log(`✅ Deleted old brand logo file: ${filePath}`);
                 }
               }
-              
+
               // Delete from vendor_media table
               const { error: dbDeleteError } = await supabase
                 .from('vendor_media')
                 .delete()
                 .eq('id', logo.id);
-                
+
               if (dbDeleteError) {
                 console.error('Error deleting brand logo from database:', dbDeleteError);
               } else {
@@ -2309,7 +2309,7 @@ export const reviewVendorProfileChange = async (
               }
             }
           }
-          
+
           // Insert new brand logo if provided
           if (brandLogoUrl && brandLogoUrl.trim() !== '') {
             console.log('Inserting new brand logo');
@@ -2323,7 +2323,7 @@ export const reviewVendorProfileChange = async (
                 public: true,
                 uploaded_at: new Date().toISOString()
               });
-              
+
             if (insertError) {
               console.error('❌ Error inserting brand logo:', insertError);
               console.warn('Vendor profile updated but brand logo update failed');
@@ -2344,7 +2344,7 @@ export const reviewVendorProfileChange = async (
         console.log('=== UPDATING CONTACT PERSON IMAGE IN VENDOR_MEDIA ===');
         console.log('Vendor ID:', changeRecord.vendor_id);
         console.log('Contact person image URL:', contactPersonImageUrl);
-        
+
         try {
           // Get ALL existing contact person images (to delete old files from storage)
           const { data: existingImages, error: fetchError } = await supabase
@@ -2352,21 +2352,21 @@ export const reviewVendorProfileChange = async (
             .select('id, media_url, gdrive_file_id')
             .eq('vendor_id', changeRecord.vendor_id.toString())
             .eq('category', 'contact_person');
-            
+
           if (fetchError && fetchError.code !== 'PGRST116') {
             console.error('Error fetching existing contact person images:', fetchError);
           }
-          
+
           // Delete old contact person image files from storage
           if (existingImages && existingImages.length > 0) {
             console.log(`Found ${existingImages.length} existing contact person image(s), deleting old files from storage...`);
-            
+
             for (const image of existingImages) {
               // Extract file path from media_url
               // URL format: https://...supabase.co/storage/v1/object/public/vendor-images/14/contact_person/contact_person_123.jpg
               // Extract: 14/contact_person/contact_person_123.jpg
               let filePath: string | null = null;
-              
+
               if (image.media_url) {
                 const urlMatch = image.media_url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
                 if (urlMatch) {
@@ -2376,13 +2376,13 @@ export const reviewVendorProfileChange = async (
                   filePath = image.gdrive_file_id;
                 }
               }
-              
+
               if (filePath) {
                 console.log(`Deleting old contact person image file from storage: ${filePath}`);
                 const { error: storageDeleteError } = await supabase.storage
                   .from('vendor-images')
                   .remove([filePath]);
-                  
+
                 if (storageDeleteError) {
                   console.warn(`Could not delete file ${filePath} from storage:`, storageDeleteError);
                   // Continue anyway - file might not exist or already deleted
@@ -2390,13 +2390,13 @@ export const reviewVendorProfileChange = async (
                   console.log(`✅ Deleted old contact person image file: ${filePath}`);
                 }
               }
-              
+
               // Delete from vendor_media table
               const { error: dbDeleteError } = await supabase
                 .from('vendor_media')
                 .delete()
                 .eq('id', image.id);
-                
+
               if (dbDeleteError) {
                 console.error('Error deleting contact person image from database:', dbDeleteError);
               } else {
@@ -2404,7 +2404,7 @@ export const reviewVendorProfileChange = async (
               }
             }
           }
-          
+
           // Insert new contact person image if provided
           if (contactPersonImageUrl && contactPersonImageUrl.trim() !== '') {
             console.log('Inserting new contact person image');
@@ -2418,7 +2418,7 @@ export const reviewVendorProfileChange = async (
                 public: true,
                 uploaded_at: new Date().toISOString()
               });
-              
+
             if (insertError) {
               console.error('❌ Error inserting contact person image:', insertError);
               console.warn('Vendor profile updated but contact person image update failed');
@@ -2438,11 +2438,11 @@ export const reviewVendorProfileChange = async (
       if (highlightStatusChanges && highlightStatusChanges.changed_images) {
         console.log('=== APPLYING HIGHLIGHT STATUS CHANGES ===');
         console.log('Highlight changes:', highlightStatusChanges);
-        
+
         try {
           for (const changedImg of highlightStatusChanges.changed_images) {
             console.log(`Updating highlight status for image: ${changedImg.media_url} to ${changedImg.is_highlighted}`);
-            
+
             // Find the image in vendor_media table by media_url and vendor_id
             const { data: imageRecord, error: findError } = await supabase
               .from('vendor_media')
@@ -2469,7 +2469,7 @@ export const reviewVendorProfileChange = async (
               console.log(`✅ Successfully updated highlight status for image ${imageRecord.id}`);
             }
           }
-          
+
           console.log('✅ All highlight status changes applied successfully');
         } catch (highlightError) {
           console.error('❌ Error applying highlight status changes:', highlightError);
@@ -2484,12 +2484,12 @@ export const reviewVendorProfileChange = async (
     // Create notification for vendor about admin decision
     try {
       console.log('🔔 Creating admin notification for vendor:', changeRecord.vendor_id);
-      const notificationMessage = status === 'approved' 
+      const notificationMessage = status === 'approved'
         ? `Your profile changes have been approved${adminComments ? ` with comments: ${adminComments}` : ''}`
         : `Your profile changes have been rejected${adminComments ? ` for the following reason: ${adminComments}` : ''}`;
-      
-      const notificationTitle = status === 'approved' 
-        ? 'Profile Changes Approved' 
+
+      const notificationTitle = status === 'approved'
+        ? 'Profile Changes Approved'
         : 'Profile Changes Rejected';
 
       console.log('📝 Notification message:', notificationMessage);
@@ -2524,9 +2524,9 @@ export const reviewVendorProfileChange = async (
       // Don't fail the entire operation
     }
 
-    return { 
-      success: true, 
-      message: `Changes ${status} successfully` 
+    return {
+      success: true,
+      message: `Changes ${status} successfully`
     };
   } catch (error) {
     console.error('Error reviewing profile change:', error);
@@ -2602,7 +2602,7 @@ export const getVendorLeadStats = async (vendorId: number): Promise<any> => {
       advance_received_leads: leads.filter(l => l.status === 'advance_received').length,
       completed_leads: leads.filter(l => l.status === 'completed').length,
       lost_leads: leads.filter(l => l.status === 'lost').length,
-      conversion_rate: leads.length > 0 ? 
+      conversion_rate: leads.length > 0 ?
         Math.round((leads.filter(l => l.converted_to_booking).length / leads.length) * 100 * 100) / 100 : 0,
       total_revenue: leads
         .filter(l => l.status === 'completed' && l.final_booking_amount)
@@ -2629,7 +2629,7 @@ export const getVendorLeadStats = async (vendorId: number): Promise<any> => {
   }
 };
 
-export const addVendorLead = async (leadData: any): Promise<{success: boolean, leadId?: number, message?: string}> => {
+export const addVendorLead = async (leadData: any): Promise<{ success: boolean, leadId?: number, message?: string }> => {
   try {
     console.log('Adding lead with data:', leadData);
 
@@ -2637,12 +2637,12 @@ export const addVendorLead = async (leadData: any): Promise<{success: boolean, l
     const { data: tableTest, error: tableError } = await supabase
       .from('vendor_leads')
       .select('count', { count: 'exact' });
-    
+
     if (tableError) {
       console.error('vendor_leads table does not exist or is not accessible:', tableError);
-      return { 
-        success: false, 
-        message: 'vendor_leads table not found. Please run the SQL script to create it.' 
+      return {
+        success: false,
+        message: 'vendor_leads table not found. Please run the SQL script to create it.'
       };
     }
 
@@ -2664,28 +2664,28 @@ export const addVendorLead = async (leadData: any): Promise<{success: boolean, l
         hint: error.hint,
         code: error.code
       });
-      return { 
-        success: false, 
-        message: `Failed to add lead: ${error.message}` 
+      return {
+        success: false,
+        message: `Failed to add lead: ${error.message}`
       };
     }
 
     console.log('Lead added successfully:', data);
-    return { 
-      success: true, 
+    return {
+      success: true,
       leadId: data.id,
-      message: 'Lead added successfully' 
+      message: 'Lead added successfully'
     };
   } catch (error) {
     console.error('Error adding lead:', error);
-    return { 
-      success: false, 
-      message: `Failed to add lead: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    return {
+      success: false,
+      message: `Failed to add lead: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 };
 
-export const updateVendorLead = async (leadId: number, updateData: any): Promise<{success: boolean, message?: string}> => {
+export const updateVendorLead = async (leadId: number, updateData: any): Promise<{ success: boolean, message?: string }> => {
   try {
     const { error } = await supabase
       .from('vendor_leads')
@@ -2708,10 +2708,10 @@ export const updateVendorLead = async (leadId: number, updateData: any): Promise
 };
 
 export const updateLeadStatus = async (
-  leadId: number, 
-  newStatus: string, 
+  leadId: number,
+  newStatus: string,
   notes?: string
-): Promise<{success: boolean, message?: string}> => {
+): Promise<{ success: boolean, message?: string }> => {
   try {
     const updateData: any = {
       status: newStatus,
@@ -2730,7 +2730,7 @@ export const updateLeadStatus = async (
         .select('contact_count')
         .eq('id', leadId)
         .single();
-      
+
       updateData.contact_count = (currentLead?.contact_count || 0) + 1;
     }
 
@@ -2756,7 +2756,7 @@ export const updateLeadStatus = async (
   }
 };
 
-export const deleteVendorLead = async (leadId: number): Promise<{success: boolean, message?: string}> => {
+export const deleteVendorLead = async (leadId: number): Promise<{ success: boolean, message?: string }> => {
   try {
     const { error } = await supabase
       .from('vendor_leads')
@@ -2817,9 +2817,9 @@ export const createVendorEvent = async (eventData: any): Promise<{ success: bool
     );
 
     if (conflicts.length > 0) {
-      return { 
-        success: false, 
-        error: `Conflict detected with existing event: "${conflicts[0].title}"` 
+      return {
+        success: false,
+        error: `Conflict detected with existing event: "${conflicts[0].title}"`
       };
     }
 
@@ -2857,9 +2857,9 @@ export const updateVendorEvent = async (eventId: number, eventData: any): Promis
       );
 
       if (conflicts.length > 0) {
-        return { 
-          success: false, 
-          error: `Conflict detected with existing event: "${conflicts[0].title}"` 
+        return {
+          success: false,
+          error: `Conflict detected with existing event: "${conflicts[0].title}"`
         };
       }
     }
@@ -3030,7 +3030,7 @@ export const addReview = async (
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
   try {
     console.log(`Adding review for vendor ${vendorId} by customer ${customerId}`);
-    
+
     // Validate required fields
     if (!vendorId) {
       return { success: false, error: 'Vendor ID is required' };
