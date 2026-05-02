@@ -1,5 +1,6 @@
 const express = require('express');
 const { supabase } = require('../config/supabase');
+const { sendLikeNotificationEmail } = require('../services/emailService');
 const router = express.Router();
 
 // Save like vendor API
@@ -61,6 +62,58 @@ router.post('/save-like', async (req, res) => {
     }
 
     console.log('Like saved successfully:', data);
+
+    // Fetch vendor and customer details for notifications
+    const { data: vendorData } = await supabase
+      .from('vendors')
+      .select('brand_name, email')
+      .eq('vendor_id', parseInt(vendor_id))
+      .single();
+
+    const { data: customerData } = await supabase
+      .from('customers')
+      .select('full_name')
+      .eq('id', parseInt(customer_id))
+      .single();
+
+    const vendorName = vendorData?.brand_name || 'there';
+    const vendorEmail = vendorData?.email;
+    const customerName = customerData?.full_name || 'A customer';
+
+    // Insert in-app admin notification for the vendor
+    const { error: notifError } = await supabase
+      .from('admin_notifications')
+      .insert({
+        vendor_id: parseInt(vendor_id),
+        notification_type: 'like',
+        title: `${customerName} liked your profile! 💛`,
+        message: `${customerName} saved your profile on HappyMoments. They might be interested in booking you!`,
+        is_read: false,
+        admin_username: 'HappyMoments'
+      });
+
+    if (notifError) {
+      console.error('⚠️ Failed to insert like notification (non-fatal):', notifError);
+    } else {
+      console.log(`✅ In-app like notification created for vendor ${vendor_id}`);
+    }
+
+    // Send email notification to vendor (fire and forget)
+    if (vendorEmail) {
+      sendLikeNotificationEmail(vendorEmail, vendorName, customerName)
+        .then(result => {
+          if (result.success) {
+            console.log(`✅ Like notification email sent to vendor: ${vendorEmail}`);
+          } else {
+            console.error(`❌ Failed to send like notification email: ${result.error}`);
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error sending like notification email:', err);
+        });
+    } else {
+      console.warn(`⚠️ No email found for vendor ${vendor_id}, skipping like email`);
+    }
 
     res.json({
       success: true,

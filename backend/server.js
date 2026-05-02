@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
-app.use(helmet());
+// Basic helmet is applied above or specifically configured
 
 // Rate limiting to prevent spam
 const limiter = rateLimit({
@@ -30,14 +30,32 @@ const limiter = rateLimit({
 // Middleware
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:8080', // Additional port for development
-    'http://localhost:3000',  // React default port
-    'https://happy-moments-eta.vercel.app', // Main deployed frontend
-    /^https:\/\/happy-moments.*\.vercel\.app$/ // Allow preview deployments
-  ],
+    process.env.FRONTEND_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
+    'https://happy-moments-eta.vercel.app',
+    'https://happymomentsindia.com',
+    'https://api.happymomentsindia.com',
+    /^https:\/\/happy-moments.*\.vercel\.app$/
+  ].filter(Boolean),
   credentials: true
 }));
+
+// Re-configure helmet to be more permissive for cross-origin resources in development
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: false, // Disable CSP for easier development
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

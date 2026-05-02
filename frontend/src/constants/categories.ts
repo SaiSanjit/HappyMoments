@@ -27,6 +27,9 @@ export const CATEGORY_NAMES = {
   [CATEGORY_CODES.TENT_EQUIPMENT_RENTALS]: 'Tent & Equipment Rentals'
 } as const;
 
+export type CategoryName = typeof CATEGORY_NAMES[keyof typeof CATEGORY_NAMES];
+
+
 // Reverse mapping for easy lookup
 export const CATEGORY_NAME_TO_CODE: Record<string, string> = {
   'Event Planners': CATEGORY_CODES.EVENT_PLANNERS,

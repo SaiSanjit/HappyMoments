@@ -1,5 +1,6 @@
 const express = require('express');
 const { supabase } = require('../config/supabase');
+const { sendContactNotificationEmail } = require('../services/emailService');
 const router = express.Router();
 
 // Admin endpoint: Send customer to vendor
@@ -126,19 +127,21 @@ router.post('/save-contact', async (req, res) => {
     // Get vendor details for customer notification message
     const { data: vendorData, error: vendorError } = await supabase
       .from('vendors')
-      .select('brand_name')
+      .select('brand_name, email')
       .eq('vendor_id', parseInt(vendor_id))
       .single();
 
     // Get customer details for vendor notification message
     const { data: customerData, error: customerError } = await supabase
       .from('customers')
-      .select('full_name')
+      .select('full_name, email')
       .eq('id', parseInt(customer_id))
       .single();
 
     const vendorName = vendorData?.brand_name || 'the event vendor';
+    const vendorEmail = vendorData?.email;
     const customerName = customerData?.full_name || 'A customer';
+    const customerEmail = customerData?.email || 'No email provided';
     
     // Notification message for vendor: "Customer Name contacted you"
     const vendorNotificationMessage = `${customerName} contacted you`;
@@ -171,6 +174,44 @@ router.post('/save-contact', async (req, res) => {
 
     console.log('Contact saved successfully:', newContact);
     console.log('Vendor notified about new contact:', vendor_id);
+
+    // Insert in-app admin notification for the vendor
+    const { error: notifError } = await supabase
+      .from('admin_notifications')
+      .insert({
+        vendor_id: parseInt(vendor_id),
+        notification_type: 'whatsapp_contact',
+        title: `${customerName} contacted you via WhatsApp! 💬`,
+        message: `${customerName} opened a WhatsApp chat with you from HappyMoments. Respond quickly to convert them into a booking!`,
+        is_read: false,
+        admin_username: 'HappyMoments'
+      });
+
+    if (notifError) {
+      console.error('⚠️ Failed to insert admin notification (non-fatal):', notifError);
+    } else {
+      console.log(`✅ In-app notification created for vendor ${vendor_id}`);
+    }
+
+    // Send email notification to vendor if email is available
+    if (vendorEmail) {
+      const message = `${customerName} is interested in your services and contacted you via HappyMoments. Please respond promptly!`;
+      
+      // Fire and forget email sending
+      sendContactNotificationEmail(vendorEmail, customerName, customerEmail, message, vendorName)
+        .then(result => {
+          if (result.success) {
+            console.log(`✅ Notification email sent to vendor: ${vendorEmail}`);
+          } else {
+            console.error(`❌ Failed to send notification email to vendor: ${result.error}`);
+          }
+        })
+        .catch(err => {
+          console.error('❌ Error sending notification email:', err);
+        });
+    } else {
+      console.warn(`⚠️ No email found for vendor ${vendor_id}, skipping email notification`);
+    }
 
     res.json({
       success: true,

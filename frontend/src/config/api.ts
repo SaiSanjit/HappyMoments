@@ -1,11 +1,21 @@
 // Centralized API configuration
-// In production, set VITE_API_BASE_URL to your deployed backend URL (e.g. https://api.happymomentsindia.com)
-// In development, it falls back to localhost:3001
+// IMPORTANT: Set VITE_API_BASE_URL in your Vercel/production environment variables
+// to your Express backend deployment URL (e.g. https://happy-moments-backend.vercel.app)
+// NOTE: api.happymomentsindia.com is the Supabase domain — do NOT use it here.
 
-const isProduction = 
-  window.location.hostname !== 'localhost' && 
-  window.location.hostname !== '127.0.0.1' && 
-  window.location.hostname !== '[::1]' &&
-  !window.location.hostname.startsWith('192.168.');
+const hostname = window.location.hostname;
+const isLocal = 
+  hostname === 'localhost' || 
+  hostname === '127.0.0.1' || 
+  hostname === '[::1]' || 
+  hostname.endsWith('.local') || 
+  hostname.startsWith('192.168.') || 
+  hostname.startsWith('10.') || 
+  hostname.startsWith('172.');
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (isProduction ? 'https://api.happymomentsindia.com' : 'http://localhost:3001');
+  (isLocal ? 'http://localhost:3001' : '');
+
+if (!isLocal && !import.meta.env.VITE_API_BASE_URL) {
+  console.error('⚠️ VITE_API_BASE_URL is not set in production! API calls will fail. Set it to your Express backend URL in Vercel environment variables.');
+}

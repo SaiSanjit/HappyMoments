@@ -1,7 +1,8 @@
 // services/supabaseService.ts
 import { supabase, Vendor, VendorMedia } from "../lib/supabase";
-import { CATEGORY_NAMES, CATEGORY_CODES } from "../constants/categories";
+import { CATEGORY_NAMES, CATEGORY_CODES, CategoryName } from "../constants/categories";
 import { PostgrestError } from "@supabase/supabase-js";
+import { getVendorCatalogImagesFromStorage } from './supabaseStorageService';
 
 // Helper function to parse JSON fields in vendor data
 const parseVendorJsonFields = (vendorData: any): Vendor => {
@@ -295,7 +296,7 @@ export const getAllVendorsForAdmin = async (): Promise<Vendor[]> => {
 };
 
 // Get vendors by category
-export const getVendorsByCategory = async (category: string): Promise<Vendor[]> => {
+export const getVendorsByCategory = async (category: CategoryName | string | any): Promise<Vendor[]> => {
   try {
     console.log('=== GET VENDORS BY CATEGORY DEBUG ===');
     console.log('Looking for category:', category);
@@ -477,7 +478,7 @@ export const getVendorCounts = async (): Promise<Record<string, number>> => {
     }
 
     // Get all valid category names from constants
-    const validCategoryNames = Object.values(CATEGORY_NAMES);
+    const validCategoryNames = Object.values(CATEGORY_NAMES) as string[];
     
     // Initialize counts for all categories
     const counts: Record<string, number> = {};
@@ -645,9 +646,6 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
   try {
     console.log(`Getting highlighted catalog images for vendor ${vendorId}`);
     
-    // Import the storage service functions
-    const { getVendorCatalogImagesFromStorage } = await import('./supabaseStorageService');
-    
     // First get the vendor data to access catalog_images_metadata
     const { data: vendorData, error: vendorError } = await supabase
       .from('vendors')
@@ -756,9 +754,6 @@ export const getHighlightedCatalogImages = async (vendorId: number): Promise<any
 export const getAllCatalogImages = async (vendorId: number): Promise<any[]> => {
   try {
     console.log(`Getting ALL catalog images for vendor ${vendorId}`);
-    
-    // Import the storage service functions
-    const { getVendorCatalogImagesFromStorage } = await import('./supabaseStorageService');
     
     // Get all catalog images from storage buckets - ONLY from vendor-specific folder
     const possibleBuckets = ['catalog-images', 'vendor-images', 'images', 'media'];
@@ -1433,18 +1428,20 @@ export const clearVendorHardcodedServices = async (vendorId: string): Promise<{s
   }
 };
 
-// Get vendor notifications (from contacted_vendors table)
+// Get vendor notifications (from contacted_vendors AND admin_notifications tables)
 export const getVendorNotifications = async (vendorId: number, unreadOnly: boolean = false): Promise<any[]> => {
   try {
     console.log(`🔔 Fetching vendor notifications for vendor ID: ${vendorId}`);
-    
-    let query = supabase
+
+    // ── 1. Fetch from contacted_vendors (customer contacts / admin-sent) ──────
+    let contactQuery = supabase
       .from('contacted_vendors')
       .select(`
         contact_id,
         customer_id,
         vendor_id,
         status,
+        vendor_status,
         vendor_notified,
         customer_notified,
         notification_message,
@@ -1454,79 +1451,59 @@ export const getVendorNotifications = async (vendorId: number, unreadOnly: boole
       `)
       .eq('vendor_id', vendorId.toString())
       .order('contacted_at', { ascending: false })
-      .limit(20); // Get latest 20 contacts
+      .limit(20);
 
-    // If we only want unread notifications (vendor_notified = true means unread)
     if (unreadOnly) {
-      query = query.eq('vendor_notified', true);
+      contactQuery = contactQuery.eq('vendor_notified', true);
     }
 
-    const { data, error } = await query;
+    const { data: contactData, error: contactError } = await contactQuery;
 
-    if (error) {
-      console.error('❌ Error fetching vendor notifications:', error);
-      return [];
+    if (contactError) {
+      console.error('❌ Error fetching contacted_vendors notifications:', contactError);
     }
 
-    console.log(`📊 Raw vendor notification data:`, data);
+    // Fetch customer details for regular contacts
+    const customerIds = (contactData || []).map(c => c.customer_id).filter(id => id > 0);
+    let customerDetails: Record<number, any> = {};
 
-    // Get customer details for regular customers (positive customer_id)
-    const customerIds = (data || []).map(contact => contact.customer_id).filter(id => id > 0);
-    let customerDetails = {};
-    
     if (customerIds.length > 0) {
-      const { data: customersData, error: customersError } = await supabase
+      const { data: customersData } = await supabase
         .from('customers')
         .select('id, full_name, email, mobile_number')
         .in('id', customerIds);
 
-      if (customersError) {
-        console.error('❌ Error fetching customer details:', customersError);
-      } else {
-        customerDetails = (customersData || []).reduce((acc, customer) => {
-          acc[customer.id] = customer;
-          return acc;
-        }, {});
-        console.log(`✅ Customer details fetched:`, customerDetails);
-      }
+      customerDetails = (customersData || []).reduce((acc, customer) => {
+        acc[customer.id] = customer;
+        return acc;
+      }, {} as Record<number, any>);
     }
 
-    // Transform the data to match notification format
-    const transformedData = (data || []).map(contact => {
+    // Transform contacted_vendors rows
+    const contactNotifications = (contactData || []).map(contact => {
       let customerInfo = null;
       let notificationType = 'contact';
       let title = 'New Customer Contact';
-      
-      // Handle admin notifications (negative customer_id with Approved/Rejected vendor_status)
+
       if (contact.customer_id < 0 && (contact.vendor_status === 'Approved' || contact.vendor_status === 'Rejected')) {
         notificationType = 'admin_notification';
         title = contact.vendor_status === 'Approved' ? 'Profile Changes Approved' : 'Profile Changes Rejected';
-        customerInfo = {
-          full_name: 'Admin',
-          mobile_number: '',
-          email: ''
-        };
-      }
-      // Handle admin-sent customers (negative customer_id)
-      else if (contact.customer_id < 0) {
+        customerInfo = { full_name: 'Admin', mobile_number: '', email: '' };
+      } else if (contact.customer_id < 0) {
         notificationType = 'admin_customer';
         title = 'Admin Sent Customer';
-        // Extract customer name and phone from notes for admin-sent customers
         const notes = contact.notes || '';
         const nameMatch = notes.match(/Admin-sent customer: ([^(]+)/);
         const phoneMatch = notes.match(/\(([^)]+)\)/);
-        
         customerInfo = {
           full_name: nameMatch ? nameMatch[1].trim() : 'Admin-sent Customer',
           mobile_number: phoneMatch ? phoneMatch[1] : '',
           email: ''
         };
       } else {
-        // Handle regular customers
         customerInfo = customerDetails[contact.customer_id] || null;
       }
 
-      // Format message: use notification_message if available, otherwise use customer name
       let message = contact.notification_message;
       if (!message && customerInfo) {
         message = `${customerInfo.full_name || 'A customer'} contacted you`;
@@ -1535,20 +1512,57 @@ export const getVendorNotifications = async (vendorId: number, unreadOnly: boole
       }
 
       return {
-        id: contact.contact_id,
+        id: `cv_${contact.contact_id}`,
         vendor_id: contact.vendor_id,
         customer_id: contact.customer_id,
         notification_type: notificationType,
-        title: title,
-        message: message,
+        title,
+        message,
         is_read: !contact.vendor_notified,
-        created_at: contact.contacted_at,
+        created_at: contact.contacted_at || contact.created_at,
         customers: customerInfo
       };
     });
 
-    console.log(`✅ Transformed vendor notifications:`, transformedData);
-    return transformedData;
+    // ── 2. Fetch from admin_notifications (whatsapp_contact, like, approval etc.) ─
+    let adminQuery = supabase
+      .from('admin_notifications')
+      .select('*')
+      .eq('vendor_id', vendorId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (unreadOnly) {
+      adminQuery = adminQuery.eq('is_read', false);
+    }
+
+    const { data: adminData, error: adminError } = await adminQuery;
+
+    if (adminError) {
+      console.error('❌ Error fetching admin_notifications:', adminError);
+    }
+
+    // Transform admin_notifications rows to the same shape
+    const adminNotifications = (adminData || []).map(n => ({
+      id: `an_${n.id}`,
+      vendor_id: n.vendor_id?.toString(),
+      customer_id: null,
+      notification_type: n.notification_type || 'admin_notification',
+      title: n.title,
+      message: n.message,
+      is_read: n.is_read,
+      created_at: n.created_at,
+      customers: null
+    }));
+
+    // ── 3. Merge and sort newest-first ────────────────────────────────────────
+    const merged = [...contactNotifications, ...adminNotifications].sort((a, b) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    console.log(`✅ Merged vendor notifications (${merged.length} total):`, merged);
+    return merged;
+
   } catch (error) {
     console.error('💥 Error fetching vendor notifications:', error);
     return [];

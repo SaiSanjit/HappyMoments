@@ -460,6 +460,100 @@ const emailTemplates = {
     `
   }),
 
+  // Like notification email template
+  likeNotification: (vendorName, customerName) => ({
+    subject: `💛 Someone liked your profile on HappyMoments!`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Someone liked your profile</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+          }
+          .content {
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+          }
+          .like-box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #f7931e;
+            text-align: center;
+          }
+          .heart {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 10px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>💛 Someone Liked Your Profile!</h1>
+        </div>
+        <div class="content">
+          <h2>Hi ${vendorName},</h2>
+          <p>Great news! A potential customer is interested in your services.</p>
+
+          <div class="like-box">
+            <span class="heart">❤️</span>
+            <p><strong>${customerName}</strong> just liked your profile on HappyMoments!</p>
+            <p style="color: #666; font-size: 14px;">They might be actively looking to book someone like you. Now is a great time to ensure your profile is up to date!</p>
+          </div>
+
+          <p>Tips to turn this like into a booking:</p>
+          <ul>
+            <li>Make sure your portfolio is updated with your best work</li>
+            <li>Ensure your pricing and packages are clearly listed</li>
+            <li>Respond quickly when they reach out via WhatsApp</li>
+          </ul>
+
+          <p>Keep up the great work!<br>
+          The HappyMoments Team</p>
+        </div>
+        <div class="footer">
+          <p>© 2024 HappyMoments. All rights reserved.</p>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+      Hi ${vendorName},
+
+      Great news! ${customerName} just liked your profile on HappyMoments!
+
+      They might be actively looking to book someone like you. Make sure your profile is up to date and respond quickly when they reach out.
+
+      Keep up the great work!
+      The HappyMoments Team
+    `
+  }),
+
   // Contact form notification email template
   contactNotification: (customerName, customerEmail, message, vendorName) => ({
     subject: `New inquiry from ${customerName} via HappyMoments`,
@@ -734,6 +828,29 @@ const sendReviewNotificationEmail = async (vendorEmail, vendorName, customerName
   }
 };
 
+// Send like notification email to vendor
+const sendLikeNotificationEmail = async (vendorEmail, vendorName, customerName) => {
+  try {
+    const template = emailTemplates.likeNotification(vendorName, customerName);
+
+    const result = await sendEmail({
+      to: vendorEmail,
+      subject: template.subject,
+      html: template.html,
+      text: template.text
+    });
+
+    return result;
+  } catch (error) {
+    console.error('❌ Error sending like notification email:', error);
+    return {
+      success: false,
+      error: error.message,
+      message: 'Failed to send like notification email'
+    };
+  }
+};
+
 // Send contact form notification email to vendor
 const sendContactNotificationEmail = async (vendorEmail, customerName, customerEmail, message, vendorName) => {
   try {
@@ -765,5 +882,6 @@ module.exports = {
   sendPasswordResetEmail,
   sendReviewNotificationEmail,
   sendContactNotificationEmail,
+  sendLikeNotificationEmail,
   emailTemplates
 };

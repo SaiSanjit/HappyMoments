@@ -9,6 +9,7 @@ import { parseRequest, validateParsedRequest, ParsedRequest } from '../services/
 import { processVoiceInput, VoiceExtractedData } from '../services/voiceProcessingService';
 import { createVendorFilterCriteria, searchVendorsWithFilters } from '../services/enhancedVendorFiltering';
 import { useSearchTracking } from '../hooks/use-search-tracking';
+import { ExtractedEntities } from '../services/enhancedAudioEngine';
 
 interface SmartRequestInputProps {
   onRequestParsed: (request: ParsedRequest) => void;
@@ -172,8 +173,7 @@ const SmartRequestInput: React.FC<SmartRequestInputProps> = ({
       'vikarabad': 'vikarabad',
       'medchal': 'medchal',
       'malkajgiri': 'malkajgiri',
-      'secunderabad': 'secunderabad',
-      'hyderabad': 'hyderabad'
+      'secunderabad': 'secunderabad'
     };
 
     // Replace Telugu phrases with English equivalents
@@ -307,10 +307,12 @@ const SmartRequestInput: React.FC<SmartRequestInputProps> = ({
           // Always include the original text
           parsed.originalText = newText.trim();
           
+          let voiceResult: VoiceExtractedData | undefined;
+          
           // Only use voice processing for actual voice input, not manual typing
           if (isRecording || transcript) {
             // Use our improved voice processing service only for voice input
-            const voiceResult = processVoiceInput(newText);
+            voiceResult = processVoiceInput(newText);
             
             // Update parsed request with voice processing results
             if (voiceResult.serviceType) {
@@ -320,7 +322,20 @@ const SmartRequestInput: React.FC<SmartRequestInputProps> = ({
               parsed.location = voiceResult.state;
             }
             if (voiceResult.budgetRange) {
-              parsed.budgetRange = voiceResult.budgetRange;
+              const ranges: Record<string, {min: number, max: number}> = {
+                '10k-50k': { min: 10000, max: 50000 },
+                '50k-1l': { min: 50000, max: 100000 },
+                '1l-3l': { min: 100000, max: 300000 },
+                '3l-10l': { min: 300000, max: 1000000 },
+                '10l-15l': { min: 1000000, max: 1500000 },
+                '15l-25l': { min: 1500000, max: 2500000 },
+                '25l-50l': { min: 2500000, max: 5000000 },
+                '50l-1cr': { min: 5000000, max: 10000000 }
+              };
+              const range = ranges[voiceResult.budgetRange];
+              if (range) {
+                parsed.budgetRange = { min: range.min, max: range.max, currency: 'INR' };
+              }
             }
           }
           
