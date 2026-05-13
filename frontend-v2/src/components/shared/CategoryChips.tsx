@@ -21,8 +21,7 @@ export default function CategoryChips({ onCategoryChange }: CategoryChipsProps) 
     return (
         <div className="flex items-center gap-6 overflow-x-auto no-scrollbar pb-2 pt-4 px-4 md:px-8 bg-white border-b border-gray-100">
             {CATEGORIES.map((category) => {
-                // @ts-ignore
-                const Icon = LucideIcons[category.icon] || LucideIcons.Circle;
+                const Icon = (LucideIcons[category.icon as keyof typeof LucideIcons] || LucideIcons.Circle) as LucideIcons.LucideIcon;
                 const isActive = activeCategory === category.id;
 
                 return (

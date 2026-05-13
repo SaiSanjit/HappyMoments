@@ -1,20 +1,25 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import { Settings, Calendar, Heart, ShieldCheck, LogOut, ChevronRight, User } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
-import { MOCK_VENDORS } from "@/lib/data";
 import VendorCard from "@/components/shared/VendorCard";
+import { getAllVendors } from "@/services/vendors";
+import { Vendor } from "@/lib/supabase";
 
 export default function UserDashboard() {
-    const activeBookings = [
-        {
-            id: "bk-1",
-            vendor: MOCK_VENDORS[0],
-            date: "Oct 24, 2026",
-            status: "Confirmed",
-        }
+    const [featuredVendors, setFeaturedVendors] = useState<Vendor[]>([]);
+
+    useEffect(() => {
+        getAllVendors().then((data) => setFeaturedVendors(data.slice(0, 2)));
+    }, []);
+
+    const stats = [
+        { label: "Active Bookings", value: "1" },
+        { label: "Draft Requests", value: "3" },
+        { label: "Messages", value: "12" },
+        { label: "Favorite Vendors", value: "24" },
     ];
 
     return (
@@ -32,7 +37,7 @@ export default function UserDashboard() {
                                     <Settings size={14} />
                                 </button>
                             </div>
-                            <h2 className="text-2xl font-black">Sai Sanjit</h2>
+                            <h2 className="text-2xl font-black">My Account</h2>
                             <p className="text-brand-muted text-sm mt-1">Joined March 2024</p>
 
                             <div className="w-full mt-8 space-y-2">
@@ -43,13 +48,13 @@ export default function UserDashboard() {
                                     </div>
                                     <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-primary" />
                                 </button>
-                                <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                                <Link href="/favorites" className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
                                     <div className="flex items-center gap-3">
                                         <Heart size={20} className="text-gray-400" />
                                         <span className="font-semibold text-gray-700">Favorites</span>
                                     </div>
                                     <ChevronRight size={16} className="text-gray-300 group-hover:text-brand-primary" />
-                                </button>
+                                </Link>
                                 <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
                                     <div className="flex items-center gap-3">
                                         <ShieldCheck size={20} className="text-gray-400" />
@@ -70,12 +75,7 @@ export default function UserDashboard() {
                     <div className="flex-1 space-y-10">
                         {/* Stats Header */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { label: 'Active Bookings', value: '1' },
-                                { label: 'Draft Requests', value: '3' },
-                                { label: 'Messages', value: '12' },
-                                { label: 'Favorite Vendors', value: '24' },
-                            ].map((stat, i) => (
+                            {stats.map((stat, i) => (
                                 <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                                     <p className="text-xs font-bold uppercase text-brand-muted tracking-wide">{stat.label}</p>
                                     <p className="text-2xl font-black mt-1">{stat.value}</p>
@@ -83,45 +83,22 @@ export default function UserDashboard() {
                             ))}
                         </div>
 
-                        {/* Active Bookings Section */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-black italic">Upcoming Events</h3>
-                                <Link href="#" className="text-sm font-bold underline">View All</Link>
-                            </div>
-
-                            <div className="space-y-4">
-                                {activeBookings.map((booking) => (
-                                    <div key={booking.id} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-6">
-                                        <div className="w-full md:w-32 h-24 rounded-xl relative overflow-hidden shrink-0">
-                                            <Image src={booking.vendor.images[0]} alt="Vendor" fill className="object-cover" />
-                                        </div>
-                                        <div className="flex-1 text-center md:text-left">
-                                            <h4 className="font-black text-lg">{booking.vendor.name}</h4>
-                                            <p className="text-brand-muted text-sm">{booking.vendor.category} • {booking.date}</p>
-                                        </div>
-                                        <div className="px-4 py-1.5 rounded-full bg-brand-accent/10 text-brand-accent text-xs font-black uppercase tracking-widest">
-                                            {booking.status}
-                                        </div>
-                                        <button className="w-full md:w-auto px-6 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm">
-                                            View Details
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
                         {/* Quick Favorites Access */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xl font-black italic">Recent Favorites</h3>
-                                <Link href="#" className="text-sm font-bold underline">Go to Wishlist</Link>
+                        {featuredVendors.length > 0 && (
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-xl font-black italic">Recent Favorites</h3>
+                                    <Link href="/favorites" className="text-sm font-bold underline">Go to Wishlist</Link>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {featuredVendors.map((v) => (
+                                        <Link key={v.vendor_id} href={`/vendor/${v.slug || v.vendor_id}`}>
+                                            <VendorCard vendor={v} />
+                                        </Link>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <VendorCard vendor={MOCK_VENDORS[1]} />
-                                <VendorCard vendor={MOCK_VENDORS[2]} />
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
