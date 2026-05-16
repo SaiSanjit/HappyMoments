@@ -122,27 +122,36 @@ export interface CRMOpportunity {
 }
 
 export type LeadStatus =
-  | 'new'
+  | 'new_lead'
   | 'contacted'
-  | 'qualified'
   | 'negotiation'
-  | 'booked'
   | 'lost'
-  | 'on_hold';
+  | 'proposal_sent'
+  | 'advance_received';
 
-export type LeadSource = 'Platform' | 'WhatsApp' | 'Referral' | 'Direct' | 'Other';
+export type LeadSource = 'platform' | 'whatsapp' | 'referral' | 'direct' | 'website' | 'other';
 
 export interface CRMLead {
-  id: string;
-  vendor_id: string;
+  id: number;
+  vendor_id: number;
   lead_number?: string;
   customer_name: string;
   customer_phone?: string;
   customer_email?: string;
-  event_type?: EventType;
+  customer_whatsapp?: string;
+  customer_address?: string;
+  event_type?: string;
   event_date?: string;
+  event_venue?: string;
   status: LeadStatus;
-  lead_source?: LeadSource;
+  lead_source?: string;
+  priority?: Priority;
+  initial_notes?: string;
+  follow_up_notes?: string;
+  admin_notes?: string;
+  lost_reason?: string;
+  budget_min?: number;
+  budget_max?: number;
   resource_id?: string;
   territory_id?: string;
   opportunity_id?: string;
@@ -151,9 +160,7 @@ export interface CRMLead {
   services: EventService[];
   contacts: EventContact[];
   qualification: LeadQualification;
-  description?: string;
-  priority?: Priority;
-  notes?: string;
+  lead_tags?: string[];
   created_at: string;
   updated_at?: string;
 }
@@ -239,7 +246,7 @@ export interface PipelineByType {
 }
 
 export interface VendorSession {
-  vendor_id: string;
+  vendor_id: number;
   brand_name: string;
   email: string;
   spoc_name: string;

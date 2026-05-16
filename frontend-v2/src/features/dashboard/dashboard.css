@@ -1,0 +1,337 @@
+/* Dashboard Shell — adapted from nalsoft-crm enterprise design */
+/* Adapts to HappyMoments light/dark theme via CSS variable overrides below */
+
+.dashboard-shell {
+  --db-bg:          var(--crm-bg,          #f8f5f1);
+  --db-line:        var(--crm-border,      rgba(201,209,220,0.9));
+  --db-text:        var(--crm-text,        #16293f);
+  --db-muted:       var(--crm-muted,       #677d91);
+  --db-section-bg:  var(--crm-surface2,    rgba(241,246,250,0.7));
+  --db-section-brd: var(--crm-border,      rgba(201,209,220,0.9));
+
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--db-bg);
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--db-text);
+}
+
+/* Note: dark/theme overrides are handled via --crm-* variables in globals.css */
+.dashboard-shell * { box-sizing: border-box; }
+
+.dashboard-shell .page {
+  padding: 8px 8px 20px;
+  display: grid;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.dashboard-shell .page::-webkit-scrollbar { display: none; }
+
+.dashboard-shell .dotted-section {
+  border: 1px solid var(--db-section-brd);
+  background: var(--db-section-bg);
+  border-radius: 28px;
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  backdrop-filter: blur(3px);
+}
+
+.dashboard-shell .section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-shell .section-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--db-text);
+}
+
+.dashboard-shell .section-head h2.overview-title {
+  font-size: 24px;
+}
+
+.dashboard-shell .overview-filters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* Filter chip */
+.dashboard-shell .filter-chip {
+  position: relative;
+  min-width: 120px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--crm-surface);
+  border: 1px solid var(--crm-border2);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-left: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.dashboard-shell .filter-chip:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+}
+
+.dashboard-shell .filter-chip svg {
+  width: 16px;
+  height: 16px;
+  color: var(--db-muted);
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.dashboard-shell .filter-chip select {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  appearance: none;
+  background: transparent;
+  color: var(--db-text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 30px 0 0;
+  cursor: pointer;
+}
+
+.dashboard-shell .filter-chip::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 1.8px solid var(--db-muted);
+  border-bottom: 1.8px solid var(--db-muted);
+  transform: translateY(-62%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* KPI Grid */
+.dashboard-shell .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Dashboard divider */
+.dashboard-shell .dashboard-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--db-line) 50%, transparent 100%);
+  border: none;
+  margin: 6px 0;
+}
+
+.dashboard-shell .sub-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dashboard-shell .sub-section-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--db-muted);
+}
+
+/* Status Distribution */
+.dashboard-shell .status-distribution-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.dashboard-shell .status-distribution-card {
+  background: var(--crm-surface, rgba(255,255,255,0.92));
+  border: 1px solid var(--db-line);
+  border-radius: 22px;
+  padding: 18px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-shell .status-distribution-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.dashboard-shell .status-distribution-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--db-text);
+}
+
+.dashboard-shell .status-distribution-head small {
+  color: var(--db-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.dashboard-shell .status-distribution-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.dashboard-shell .status-distribution-step {
+  min-height: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px 8px 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(20,48,78,0.08);
+  border-radius: 8px 18px 18px 8px;
+  transform-origin: left;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+.dashboard-shell .status-distribution-step:hover {
+  filter: brightness(0.95);
+  transform: translateX(4px);
+}
+
+.dashboard-shell .status-distribution-step .left {
+  min-width: 0;
+  max-width: calc(100% - 80px);
+}
+
+.dashboard-shell .status-distribution-step .left strong {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-shell .status-distribution-step .right {
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 100%;
+}
+
+.dashboard-shell .status-distribution-step .metric-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0 14px;
+  height: 100%;
+  border-left: 1px solid rgba(255,255,255,0.12);
+  min-width: 55px;
+}
+
+.dashboard-shell .status-distribution-step .metric-value {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dashboard-shell .metric-value.monocase {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Donut grid */
+.dashboard-shell .donut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 16px;
+}
+
+.dashboard-shell .donut-card {
+  background: var(--crm-surface, rgba(255,255,255,0.92));
+  border: 1px solid var(--db-line);
+  border-radius: 22px;
+  padding: 18px;
+  min-width: 0;
+}
+
+.dashboard-shell .donut-head h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--db-text);
+}
+
+.dashboard-shell .donut-head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--db-muted);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .dashboard-shell .kpi-grid {
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-shell .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 10px;
+  }
+  .dashboard-shell .kpi-grid > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+  .dashboard-shell .status-distribution-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-shell .donut-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-shell .overview-filters {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .dashboard-shell .dotted-section {
+    padding: 12px;
+    border-radius: 20px;
+  }
+  .dashboard-shell .page {
+    padding: 6px 6px 88px;
+    gap: 10px;
+  }
+}

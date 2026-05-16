@@ -127,13 +127,13 @@ export async function getTerritoryResources(
 // ── Leads ─────────────────────────────────────────────────────────────────────
 
 export async function getLeads(
-  vendorId: string,
+  vendorId: string | number,
   resourceId?: string
 ): Promise<CRMLead[]> {
   let query = supabase
     .from('vendor_leads')
     .select('*')
-    .eq('vendor_id', vendorId)
+    .eq('vendor_id', Number(vendorId))
     .order('created_at', { ascending: false });
 
   if (resourceId) query = query.eq('resource_id', resourceId);
@@ -143,11 +143,11 @@ export async function getLeads(
   return data as unknown as CRMLead[];
 }
 
-export async function getLead(id: string): Promise<CRMLead | null> {
+export async function getLead(id: string | number): Promise<CRMLead | null> {
   const { data, error } = await supabase
     .from('vendor_leads')
     .select('*')
-    .eq('id', id)
+    .eq('id', Number(id))
     .single();
   if (error || !data) return null;
   return data as unknown as CRMLead;
@@ -156,9 +156,15 @@ export async function getLead(id: string): Promise<CRMLead | null> {
 export async function createLead(
   payload: Partial<CRMLead>
 ): Promise<{ data: CRMLead | null; error: string | null }> {
+  // Map app fields to actual DB columns
+  const { ...rest } = payload as Record<string, unknown>;
+  const dbPayload: Record<string, unknown> = {
+    ...rest,
+    vendor_id: Number(rest.vendor_id),
+  };
   const { data, error } = await supabase
     .from('vendor_leads')
-    .insert(payload)
+    .insert(dbPayload)
     .select()
     .single();
   if (error) return { data: null, error: error.message };
@@ -166,13 +172,13 @@ export async function createLead(
 }
 
 export async function updateLead(
-  id: string,
+  id: string | number,
   payload: Partial<CRMLead>
 ): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from('vendor_leads')
     .update({ ...payload, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .eq('id', Number(id));
   return { error: error?.message ?? null };
 }
 
@@ -337,7 +343,7 @@ export async function updateWorklistItem(
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export async function getDashboardKPI(
-  vendorId: string,
+  vendorId: string | number,
   filters: DashboardFilters
 ): Promise<DashboardKPI> {
   const periodStart = getPeriodStart(filters.period);
@@ -345,7 +351,7 @@ export async function getDashboardKPI(
   let leadsQ = supabase
     .from('vendor_leads')
     .select('id, status', { count: 'exact' })
-    .eq('vendor_id', vendorId);
+    .eq('vendor_id', Number(vendorId));
   if (periodStart) leadsQ = leadsQ.gte('created_at', periodStart);
   if (filters.resource_id) leadsQ = leadsQ.eq('resource_id', filters.resource_id);
   if (filters.territory_id) leadsQ = leadsQ.eq('territory_id', filters.territory_id);
@@ -383,11 +389,11 @@ export async function getDashboardKPI(
 }
 
 export async function getLeadStatusBreakdown(
-  vendorId: string,
+  vendorId: string | number,
   filters: DashboardFilters
 ): Promise<StatusBreakdown[]> {
   const periodStart = getPeriodStart(filters.period);
-  let q = supabase.from('vendor_leads').select('status').eq('vendor_id', vendorId);
+  let q = supabase.from('vendor_leads').select('status').eq('vendor_id', Number(vendorId));
   if (periodStart) q = q.gte('created_at', periodStart);
   if (filters.resource_id) q = q.eq('resource_id', filters.resource_id);
 
@@ -395,8 +401,8 @@ export async function getLeadStatusBreakdown(
   if (!data) return [];
 
   const colors: Record<string, string> = {
-    new: '#6366f1', contacted: '#f59e0b', qualified: '#3b82f6',
-    negotiation: '#8b5cf6', booked: '#10b981', lost: '#ef4444', on_hold: '#6b7280',
+    new_lead: '#6366f1', contacted: '#f59e0b', negotiation: '#8b5cf6',
+    proposal_sent: '#3b82f6', advance_received: '#10b981', lost: '#ef4444',
   };
 
   const counts: Record<string, number> = {};

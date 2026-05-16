@@ -28,7 +28,7 @@ export default function VendorLoginPage() {
   const [otpStep, setOtpStep] = useState<OtpStep>("email");
 
   // Password mode fields
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -49,7 +49,7 @@ export default function VendorLoginPage() {
     e.preventDefault();
     resetState();
     setLoading(true);
-    const { error: err } = await signIn(username, password);
+    const { error: err } = await signIn(email, password);
     setLoading(false);
     if (err) { setError(err); return; }
     router.push("/vendor-dashboard");
@@ -201,13 +201,13 @@ export default function VendorLoginPage() {
             <form onSubmit={handlePasswordLogin} className="flex flex-col gap-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium" style={{ color: "var(--text-muted)" }}>
-                  Username
+                  Email
                 </label>
                 <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Your vendor username"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
                   required
                   {...inp}
                 />

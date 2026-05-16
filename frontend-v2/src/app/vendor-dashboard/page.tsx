@@ -2,10 +2,10 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Menu } from "lucide-react";
 import { useVendorAuth } from "@/contexts/VendorAuth";
 import { useResourceAuth } from "@/contexts/ResourceAuth";
 import CRMSidebar from "./components/CRMSidebar";
+import CRMTopBar from "./components/CRMTopBar";
 import DashboardPage from "@/features/dashboard/DashboardPage";
 import LeadsPage from "@/features/leads/LeadsPage";
 import OpportunitiesPage from "@/features/opportunities/OpportunitiesPage";
@@ -17,23 +17,32 @@ import DiscussionsPage from "@/features/discussions/DiscussionsPage";
 
 type Tab = "dashboard" | "leads" | "opportunities" | "discussions" | "chat" | "worklist" | "resources" | "territories";
 
+const PAGE_TITLES: Record<Tab, string> = {
+  dashboard:     "Dashboard",
+  leads:         "Leads",
+  opportunities: "Opportunities",
+  discussions:   "Discussions",
+  chat:          "Chat",
+  worklist:      "Work List",
+  resources:     "Resources",
+  territories:   "Territories",
+};
+
 function VendorDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { vendor, loading: vendorLoading } = useVendorAuth();
   const { resource, loading: resourceLoading } = useResourceAuth();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>((searchParams.get("tab") as Tab) || "dashboard");
 
   const loading = vendorLoading || resourceLoading;
   const isAuthenticated = !!vendor || !!resource;
-  const vendorId = vendor?.vendor_id || resource?.vendor_id || "";
+  const vendorId = String(vendor?.vendor_id || resource?.vendor_id || "");
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.replace("/vendor/login");
-    }
+    if (!loading && !isAuthenticated) router.replace("/vendor/login");
   }, [loading, isAuthenticated, router]);
 
   const handleTabChange = (tab: string) => {
@@ -58,12 +67,7 @@ function VendorDashboardContent() {
       case "dashboard":     return <DashboardPage vendorId={vendorId} />;
       case "leads":         return <LeadsPage vendorId={vendorId} />;
       case "opportunities": return <OpportunitiesPage vendorId={vendorId} />;
-      case "discussions":   return (
-        <DiscussionsPage
-          vendorId={vendorId}
-          vendorName={vendor?.brand_name || "Your Venue"}
-        />
-      );
+      case "discussions":   return <DiscussionsPage vendorId={vendorId} vendorName={vendor?.brand_name || "Your Venue"} />;
       case "chat":          return <ChatsPage vendorId={vendorId} />;
       case "worklist":      return <WorkListPage vendorId={vendorId} />;
       case "resources":     return <ResourcesPage vendorId={vendorId} />;
@@ -73,58 +77,46 @@ function VendorDashboardContent() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
-      {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r lg:block" style={{ borderColor: "var(--border3)" }}>
-        <CRMSidebar activeTab={activeTab} onTabChange={handleTabChange} />
-      </aside>
+    <div className="h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
+      {/* Desktop elastic pill sidebar */}
+      <CRMSidebar activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <aside className="relative w-64 shadow-2xl">
-            <CRMSidebar
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-              onClose={() => setSidebarOpen(false)}
-            />
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileSidebarOpen(false)} />
+          <aside className="relative w-72 shadow-2xl">
+            <CRMSidebar activeTab={activeTab} onTabChange={handleTabChange} onClose={() => setMobileSidebarOpen(false)} mobile />
           </aside>
         </div>
       )}
 
-      {/* Main content */}
-      <main className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile header */}
-        <div
-          className="flex items-center gap-3 px-4 py-3 lg:hidden"
-          style={{ borderBottom: "1px solid var(--border3)", background: "var(--bg2)" }}
-        >
-          <button onClick={() => setSidebarOpen(true)} style={{ color: "var(--text-muted)" }}>
-            <Menu size={22} />
-          </button>
-          <span className="text-sm font-semibold capitalize" style={{ color: "var(--text)" }}>
-            {activeTab.replace("-", " ")}
-          </span>
-        </div>
+      {/* Content area offset to the right of the desktop sidebar */}
+      <div className="flex flex-col h-full md:pl-[88px]">
+        {/* Top bar */}
+        <CRMTopBar
+          title={PAGE_TITLES[activeTab]}
+          onMobileMenuOpen={() => setMobileSidebarOpen(true)}
+          vendor={vendor}
+          resource={resource}
+        />
 
-        <div className="flex-1 overflow-y-auto">
+        {/* Page content — offset top by topbar height */}
+        <main className="flex-1 overflow-y-auto pt-[72px] md:pt-[88px]">
           {renderTab()}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
 
 export default function VendorDashboardShell() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--bg)" }}>
-          <div className="h-8 w-8 animate-spin rounded-full border-2" style={{ borderColor: "var(--gold)", borderTopColor: "transparent" }} />
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--bg)" }}>
+        <div className="h-8 w-8 animate-spin rounded-full border-2" style={{ borderColor: "var(--gold)", borderTopColor: "transparent" }} />
+      </div>
+    }>
       <VendorDashboardContent />
     </Suspense>
   );

@@ -7,7 +7,7 @@ import { VendorSession } from "@/lib/crm-types";
 interface VendorAuthContextType {
   vendor: VendorSession | null;
   loading: boolean;
-  signIn: (username: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   sendOTP: (email: string) => Promise<{ error: string | null }>;
   verifyOTP: (email: string, token: string) => Promise<{ error: string | null }>;
@@ -58,30 +58,18 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
     setVendor(session);
   };
 
-  const signIn = async (username: string, password: string) => {
-    const { data, error } = await supabase
-      .from("vendor_credentials")
-      .select("vendor_id, username, password")
-      .eq("username", username.trim())
-      .single();
-
-    if (error || !data) return { error: "Invalid username or password." };
-    if (data.password !== password) return { error: "Invalid username or password." };
-
-    const { data: vendorData } = await supabase
-      .from("vendors")
-      .select("vendor_id, brand_name, email, spoc_name")
-      .eq("vendor_id", data.vendor_id)
-      .single();
-
-    if (!vendorData) return { error: "Vendor account not found." };
-
-    saveSession({
-      vendor_id: vendorData.vendor_id,
-      brand_name: vendorData.brand_name,
-      email: vendorData.email || "",
-      spoc_name: vendorData.spoc_name || "",
+  const signIn = async (email: string, password: string) => {
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
     });
+
+    if (authError) return { error: "Invalid email or password." };
+
+    const vendorSession = await fetchVendorByEmail(email);
+    if (!vendorSession) return { error: "No vendor account found for this email." };
+
+    saveSession(vendorSession);
     return { error: null };
   };
 
@@ -100,7 +88,10 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
 
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { shouldCreateUser: true },
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: `${window.location.origin}/vendor/auth/callback`,
+      },
     });
 
     if (error) return { error: error.message };

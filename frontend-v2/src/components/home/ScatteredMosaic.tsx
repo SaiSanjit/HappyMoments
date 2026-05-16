@@ -444,7 +444,8 @@ const ITEMS: Item[] = [
 export default function ScatteredMosaic() {
   return (
     <div
-      className="mosaic-container pointer-events-none absolute inset-0 overflow-hidden"
+      className="mosaic-container pointer-events-none absolute inset-x-0 overflow-hidden"
+      style={{ top: 62, bottom: 0 }}
       aria-hidden
     >
       {ITEMS.map((item, i) => (

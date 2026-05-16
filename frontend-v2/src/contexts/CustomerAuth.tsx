@@ -22,12 +22,8 @@ export function useCustomerAuth() {
   return ctx;
 }
 
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+function encodePassword(password: string): string {
+  return btoa(password);
 }
 
 export function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
@@ -51,24 +47,21 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const hash = await hashPassword(password);
+    const hash = encodePassword(password);
     const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("email", email.toLowerCase().trim())
-      .eq("password_hash", hash)
-      .single();
+      .rpc("verify_customer", { p_email: email.toLowerCase().trim(), p_password_hash: hash });
 
-    if (error || !data) return { customer: null, error: "Invalid email or password." };
+    if (error || !data || data.length === 0) return { customer: null, error: "Invalid email or password." };
+    const data0 = data[0];
 
-    const c = data as Customer;
+    const c = data0 as Customer;
     localStorage.setItem("customer_id", String(c.id));
     setCustomer(c);
     return { customer: c, error: null };
   };
 
   const signUp = async (name: string, email: string, password: string, mobile: string) => {
-    const hash = await hashPassword(password);
+    const hash = encodePassword(password);
     const { error } = await supabase.from("customers").insert({
       full_name: name,
       email: email.toLowerCase().trim(),

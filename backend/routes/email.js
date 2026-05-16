@@ -704,4 +704,97 @@ router.post('/contact-notification', async (req, res) => {
   }
 });
 
+// ── Vendor Email OTP ────────────────────────────────────────────────────────
+
+// In-memory store for vendor OTPs (10-minute expiry)
+const vendorOtpStore = new Map();
+
+const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
+
+// POST /api/email/send-vendor-otp
+router.post('/send-vendor-otp', async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'email is required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email address' });
+    }
+
+    const otp = generateOtp();
+    vendorOtpStore.set(email, {
+      otp,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    });
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#0a0804;border-radius:16px;border:1px solid #2a2218;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8d5a3);border-radius:12px;padding:10px 18px;font-weight:900;font-size:18px;color:#070503;letter-spacing:1px;">HM</div>
+        </div>
+        <h2 style="color:#e8d5a3;font-size:22px;margin:0 0 8px;">Verify your email</h2>
+        <p style="color:#8a7a5a;font-size:14px;margin:0 0 28px;">Hi ${name || 'there'}, enter this code to verify your email address for your Happy Moments vendor application.</p>
+        <div style="text-align:center;background:#1a1408;border:1px solid #3a2e1a;border-radius:12px;padding:28px;margin-bottom:24px;">
+          <span style="font-size:42px;font-weight:900;letter-spacing:12px;color:#c9a84c;">${otp}</span>
+        </div>
+        <p style="color:#5a4e32;font-size:12px;text-align:center;margin:0;">This code expires in <strong style="color:#8a7a5a;">10 minutes</strong>. Do not share it with anyone.</p>
+      </div>
+    `;
+
+    const result = await sendEmail({
+      to: email,
+      subject: `${otp} — your Happy Moments verification code`,
+      html,
+      text: `Your Happy Moments vendor verification code is: ${otp}\n\nThis code expires in 10 minutes.`,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ success: false, message: result.message || 'Failed to send OTP' });
+    }
+
+    console.log(`📧 Vendor OTP sent to: ${email}`);
+    res.json({ success: true, message: 'OTP sent successfully' });
+  } catch (error) {
+    console.error('❌ send-vendor-otp error:', error);
+    res.status(500).json({ success: false, message: 'Failed to send OTP' });
+  }
+});
+
+// POST /api/email/verify-vendor-otp
+router.post('/verify-vendor-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'email and otp are required' });
+    }
+
+    const stored = vendorOtpStore.get(email);
+
+    if (!stored) {
+      return res.status(404).json({ success: false, message: 'OTP not found. Please request a new code.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      vendorOtpStore.delete(email);
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new code.' });
+    }
+
+    if (stored.otp !== String(otp).trim()) {
+      return res.status(400).json({ success: false, message: 'Incorrect OTP. Please try again.' });
+    }
+
+    vendorOtpStore.delete(email);
+    console.log(`✅ Vendor email verified: ${email}`);
+    res.json({ success: true, message: 'Email verified successfully' });
+  } catch (error) {
+    console.error('❌ verify-vendor-otp error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify OTP' });
+  }
+});
+
 module.exports = router;

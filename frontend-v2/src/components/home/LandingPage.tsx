@@ -88,8 +88,17 @@ export default function LandingPage() {
 
         {/* AI badge */}
         <div
-          className="mb-7 inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] font-bold uppercase tracking-[0.28em]"
-          style={{ border: "1px solid rgba(201,168,76,0.28)", background: "rgba(201,168,76,0.07)", color: "var(--gold)" }}
+          className="mb-7 inline-flex items-center gap-2 rounded-full px-4 py-2"
+          style={{
+            border: "1px solid rgba(201,168,76,0.30)",
+            background: "rgba(201,168,76,0.07)",
+            color: "var(--gold)",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "10px",
+            fontWeight: 700,
+            letterSpacing: "0.26em",
+            textTransform: "uppercase",
+          }}
         >
           <Sparkles size={11} /> AI-Powered Event Planning
         </div>
@@ -102,7 +111,16 @@ export default function LandingPage() {
           Plan Your <em className="italic" style={{ color: "var(--gold)" }}>Perfect</em>
           <br />Celebration
         </h1>
-        <p className="mt-6 max-w-lg text-center text-base leading-7 md:text-lg" style={{ color: "var(--text3)" }}>
+        <p
+          className="mt-6 max-w-lg text-center leading-8 md:text-lg"
+          style={{
+            color: "var(--text3)",
+            fontFamily: "'Inter', sans-serif",
+            fontSize: "15px",
+            fontWeight: 400,
+            letterSpacing: "0.01em",
+          }}
+        >
           Discover 4,800+ verified photographers, venues, caterers, and luxury event vendors — curated for every celebration.
         </p>
 
@@ -151,11 +169,15 @@ export default function LandingPage() {
             <button
               key={chip}
               onClick={() => setActiveChip(chip)}
-              className="rounded-full px-4 py-2 text-xs font-medium transition"
+              className="rounded-full px-4 py-2 transition"
               style={{
                 border: `1px solid ${activeChip === chip ? "rgba(201,168,76,0.5)" : "var(--border2)"}`,
                 background: activeChip === chip ? "rgba(201,168,76,0.1)" : "transparent",
                 color: activeChip === chip ? "var(--gold)" : "var(--text3)",
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "11px",
+                fontWeight: activeChip === chip ? 600 : 500,
+                letterSpacing: "0.02em",
               }}
             >
               {chip}
@@ -173,8 +195,8 @@ export default function LandingPage() {
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-3 rounded-2xl px-5 py-3 backdrop-blur-md"
               style={{ border: "1px solid var(--border2)", background: "var(--bg2)" }}>
-              <span className="text-lg font-semibold" style={{ color: "var(--text)" }}>{s.value}</span>
-              <span className="text-xs" style={{ color: "var(--text3)" }}>{s.label}</span>
+              <span style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "18px", fontWeight: 700, letterSpacing: "-0.02em" }}>{s.value}</span>
+              <span style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500 }}>{s.label}</span>
             </div>
           ))}
         </div>
@@ -194,7 +216,18 @@ export default function LandingPage() {
       >
         <div className="marquee-track items-center gap-14">
           {TRUST_LABELS.map((label, i) => (
-            <span key={i} className="shrink-0 text-[10px] font-bold uppercase tracking-[0.35em]" style={{ color: "var(--text4)" }}>
+            <span
+              key={i}
+              className="shrink-0"
+              style={{
+                color: "var(--text4)",
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "9px",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.38em",
+              }}
+            >
               {label}
             </span>
           ))}
@@ -205,7 +238,7 @@ export default function LandingPage() {
       <section className="px-4 py-24 transition-colors duration-300 md:px-8" style={{ background: "var(--bg)" }}>
         <div className="mx-auto max-w-7xl">
           <div className="reveal mb-12 text-center">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.32em]" style={{ color: "var(--gold)" }}>All Categories</p>
+            <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "12px" }}>All Categories</p>
             <h2 className="font-display text-4xl md:text-5xl" style={{ color: "var(--text)" }}>
               Every vendor you need,{" "}
               <em className="italic" style={{ color: "var(--gold)" }}>in one place.</em>
@@ -228,21 +261,19 @@ export default function LandingPage() {
                 {/* Scene illustration fills card top */}
                 <div className="relative h-44 w-full overflow-hidden">
                   <AnimIcon />
-                  {/* Fade into card body */}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14"
                     style={{ background: "linear-gradient(to bottom, transparent, var(--bg2))" }}
                   />
-                  {/* Gold shimmer on hover */}
                   <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                     style={{ background: "radial-gradient(ellipse at 50% 100%, rgba(201,168,76,0.13), transparent 70%)" }}
                   />
                 </div>
                 {/* Label */}
                 <div className="px-4 pb-4 pt-1">
-                  <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{name}</p>
+                  <p style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, letterSpacing: "-0.01em" }}>{name}</p>
                   <div className="mt-1 flex items-center justify-between">
-                    <p className="text-xs" style={{ color: "var(--text3)" }}>{count} vendors</p>
-                    <span className="text-[10px] font-semibold" style={{ color: "var(--gold)" }}>Explore →</span>
+                    <p style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400 }}>{count} vendors</p>
+                    <span style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.04em" }}>Explore →</span>
                   </div>
                 </div>
               </Link>
@@ -256,7 +287,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="reveal mb-10 flex items-end justify-between">
             <div>
-              <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.32em]" style={{ color: "var(--gold)" }}>Featured</p>
+              <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "12px" }}>Featured</p>
               <h2 className="font-display text-4xl md:text-5xl" style={{ color: "var(--text)" }}>Top-rated vendors</h2>
             </div>
             <Link href="/discover"
@@ -289,16 +320,16 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--gold)" }}>{vendor.category}</p>
-                  <h3 className="mt-1 text-sm font-semibold leading-snug" style={{ color: "var(--text)" }}>{vendor.name}</h3>
-                  <p className="mt-1 text-xs" style={{ color: "var(--text3)" }}>{vendor.location}</p>
+                  <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em" }}>{vendor.category}</p>
+                  <h3 className="mt-1 leading-snug" style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, letterSpacing: "-0.01em" }}>{vendor.name}</h3>
+                  <p className="mt-1" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400 }}>{vendor.location}</p>
                   <div className="mt-3 flex items-center justify-between pt-3" style={{ borderTop: "1px solid var(--border3)" }}>
-                    <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                    <span style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "-0.01em" }}>
                       From ₹{vendor.priceFrom.toLocaleString("en-IN")}
                     </span>
                     <Link href={`/vendor/${vendor.id}`}
-                      className="rounded-lg px-3 py-1.5 text-xs font-medium transition hover:opacity-80"
-                      style={{ background: "rgba(201,168,76,0.1)", color: "var(--gold)" }}
+                      className="rounded-lg px-3 py-1.5 transition hover:opacity-80"
+                      style={{ background: "rgba(201,168,76,0.1)", color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 600 }}
                     >
                       View
                     </Link>
@@ -314,7 +345,7 @@ export default function LandingPage() {
       <section className="px-4 py-24 transition-colors duration-300 md:px-8" style={{ background: "var(--bg)" }}>
         <div className="mx-auto max-w-7xl">
           <div className="reveal mb-14 text-center">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.32em]" style={{ color: "var(--gold)" }}>Process</p>
+            <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "12px" }}>Process</p>
             <h2 className="font-display text-4xl md:text-5xl" style={{ color: "var(--text)" }}>
               From dream to <em className="italic" style={{ color: "var(--gold)" }}>done.</em>
             </h2>
@@ -323,8 +354,8 @@ export default function LandingPage() {
             {HOW_IT_WORKS.map((step, i) => (
               <div key={step.num} className="reveal rounded-2xl p-7" style={{ border: "1px solid var(--border3)", background: "var(--bg2)", transitionDelay: `${i * 90}ms` }}>
                 <span className="font-display text-5xl font-light" style={{ color: "rgba(201,168,76,0.25)" }}>{step.num}</span>
-                <h3 className="mt-5 text-sm font-semibold" style={{ color: "var(--text)" }}>{step.title}</h3>
-                <p className="mt-2.5 text-xs leading-6" style={{ color: "var(--text3)" }}>{step.desc}</p>
+                <h3 className="mt-5" style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, letterSpacing: "-0.01em" }}>{step.title}</h3>
+                <p className="mt-2.5 leading-6" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 400 }}>{step.desc}</p>
               </div>
             ))}
           </div>
@@ -335,7 +366,7 @@ export default function LandingPage() {
       <section className="px-4 py-24 transition-colors duration-300 md:px-8" style={{ background: "var(--bg4)" }}>
         <div className="mx-auto max-w-7xl">
           <div className="reveal mb-14 text-center">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.32em]" style={{ color: "var(--gold)" }}>Stories</p>
+            <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "12px" }}>Stories</p>
             <h2 className="font-display text-4xl md:text-5xl" style={{ color: "var(--text)" }}>
               Moments of <em className="italic" style={{ color: "var(--gold)" }}>pure joy.</em>
             </h2>
@@ -352,12 +383,12 @@ export default function LandingPage() {
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
                 <div className="mt-7 flex items-center gap-3 pt-5" style={{ borderTop: "1px solid var(--border3)" }}>
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ background: "rgba(201,168,76,0.12)", color: "var(--gold)" }}>
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold" style={{ background: "rgba(201,168,76,0.12)", color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "12px" }}>
                     {t.name[0]}
                   </div>
                   <div>
-                    <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>{t.name}</p>
-                    <p className="mt-0.5 text-[10px]" style={{ color: "var(--text3)" }}>{t.event}</p>
+                    <p style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 600 }}>{t.name}</p>
+                    <p className="mt-0.5" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 400 }}>{t.event}</p>
                   </div>
                 </div>
               </div>
@@ -372,27 +403,87 @@ export default function LandingPage() {
           <div className="h-[600px] w-[600px] rounded-full" style={{ background: "radial-gradient(circle, rgba(201,168,76,0.13) 0%, transparent 70%)" }} />
         </div>
         <div className="reveal relative mx-auto max-w-2xl text-center">
-          <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.32em]" style={{ color: "var(--gold)" }}>Get Started</p>
+          <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "16px" }}>Get Started</p>
           <h2 className="font-display text-5xl leading-[0.88] md:text-6xl" style={{ color: "var(--text)" }}>
             Your celebration<br />
             <em className="italic" style={{ color: "var(--gold)" }}>starts here.</em>
           </h2>
-          <p className="mx-auto mt-6 max-w-sm text-sm leading-7" style={{ color: "var(--text3)" }}>
+          <p className="mx-auto mt-6 max-w-sm leading-7" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 400 }}>
             Join thousands of families who&apos;ve discovered their dream vendors on Happy Moments.
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Link href="/discover"
-              className="rounded-full px-8 py-4 text-sm font-bold transition hover:-translate-y-0.5 hover:opacity-90"
-              style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 30px rgba(201,168,76,0.3)" }}
+              className="rounded-full px-8 py-4 transition hover:-translate-y-0.5 hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%)", color: "var(--bg)", boxShadow: "0 8px 30px rgba(201,168,76,0.3)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 700, letterSpacing: "0.01em" }}
             >
               Browse Vendors
             </Link>
             <Link href="/auth"
-              className="rounded-full px-8 py-4 text-sm font-semibold transition hover:opacity-80"
-              style={{ border: "1px solid rgba(201,168,76,0.3)", color: "var(--gold)" }}
+              className="rounded-full px-8 py-4 transition hover:opacity-80"
+              style={{ border: "1px solid rgba(201,168,76,0.3)", color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600 }}
             >
               Create Free Account
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Vendor CTA ── */}
+      <section className="px-4 py-24 transition-colors duration-300 md:px-8" style={{ background: "var(--bg4)", borderTop: "1px solid var(--border3)" }}>
+        <div className="mx-auto max-w-7xl">
+          <div className="reveal overflow-hidden rounded-3xl" style={{ border: "1px solid rgba(201,168,76,0.2)", background: "var(--bg2)" }}>
+            <div className="grid md:grid-cols-2">
+              {/* Left: text */}
+              <div className="flex flex-col justify-center px-10 py-14 md:px-14">
+                <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "16px" }}>
+                  For Vendors
+                </p>
+                <h2 className="font-display text-4xl leading-[1.05] md:text-5xl" style={{ color: "var(--text)" }}>
+                  Grow your business<br />
+                  <em className="italic" style={{ color: "var(--gold)" }}>with us.</em>
+                </h2>
+                <p className="mt-5 leading-7 max-w-sm" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 400 }}>
+                  Join 4,800+ verified vendors already booking events through Happy Moments. Get discovered by couples and families planning their perfect celebration.
+                </p>
+                <div className="mt-9 flex flex-wrap gap-3">
+                  <Link
+                    href="/vendor/onboarding"
+                    className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-bold transition hover:-translate-y-0.5 hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%)", color: "var(--bg)", fontFamily: "'Inter', sans-serif", fontSize: "13px", boxShadow: "0 8px 24px rgba(201,168,76,0.28)", letterSpacing: "0.01em" }}
+                  >
+                    List Your Business <ArrowRight size={14} />
+                  </Link>
+                  <Link
+                    href="/vendor/login"
+                    className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 transition hover:opacity-80"
+                    style={{ border: "1px solid rgba(201,168,76,0.3)", color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600 }}
+                  >
+                    Vendor Sign In
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right: stat grid */}
+              <div className="flex items-center justify-center px-10 py-14 md:border-l md:px-14" style={{ borderColor: "rgba(201,168,76,0.12)" }}>
+                <div className="grid grid-cols-2 gap-5 w-full max-w-xs">
+                  {[
+                    { value: "4,800+", label: "Active vendors" },
+                    { value: "32K+",   label: "Events booked" },
+                    { value: "28",     label: "Cities covered" },
+                    { value: "Free",   label: "To list & join" },
+                  ].map((s) => (
+                    <div
+                      key={s.label}
+                      className="flex flex-col gap-1 rounded-2xl p-5"
+                      style={{ border: "1px solid var(--border3)", background: "var(--bg)" }}
+                    >
+                      <span style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "24px", fontWeight: 700, letterSpacing: "-0.03em" }}>{s.value}</span>
+                      <span style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400 }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -403,29 +494,37 @@ export default function LandingPage() {
           <div className="mb-12 grid gap-10 md:grid-cols-[200px_1fr]">
             <div>
               <Link href="/" className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold" style={{ background: "var(--gold)", color: "var(--bg)" }}>HM</div>
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl font-black"
+                  style={{
+                    background: "linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%)",
+                    color: "var(--bg)",
+                    fontSize: "11px",
+                    letterSpacing: "0.04em",
+                  }}
+                >HM</div>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.22em]" style={{ color: "var(--text)" }}>Happy Moments</p>
-                  <p className="text-[10px]" style={{ color: "var(--text3)" }}>Luxury event marketplace</p>
+                  <p className="brand-text uppercase" style={{ color: "var(--text)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em" }}>Happy Moments</p>
+                  <p style={{ color: "var(--text3)", fontSize: "9px", fontFamily: "'Inter', sans-serif", fontWeight: 400, marginTop: "2px" }}>Luxury event marketplace</p>
                 </div>
               </Link>
-              <p className="mt-5 text-xs leading-6" style={{ color: "var(--text3)" }}>
+              <p className="mt-5 leading-6" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 400 }}>
                 Connecting you with the finest event vendors across India.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
               {[
-                { title: "Company", links: ["About", "Careers", "Press", "Contact"] },
-                { title: "Vendors", links: ["Become a Vendor", "Dashboard", "Verification", "Pricing"] },
-                { title: "Support", links: ["Help Center", "Safety", "Booking Policy", "Community"] },
-                { title: "Legal",   links: ["Privacy", "Terms", "Cookie Settings"] },
+                { title: "Company", links: [{ label: "About", href: "/" }, { label: "Careers", href: "/" }, { label: "Press", href: "/" }, { label: "Contact", href: "/" }] },
+                { title: "Vendors", links: [{ label: "Become a Vendor", href: "/vendor/onboarding" }, { label: "Vendor Sign In", href: "/vendor/login" }, { label: "Verification", href: "/" }, { label: "Pricing", href: "/" }] },
+                { title: "Support", links: [{ label: "Help Center", href: "/" }, { label: "Safety", href: "/" }, { label: "Booking Policy", href: "/" }, { label: "Community", href: "/" }] },
+                { title: "Legal",   links: [{ label: "Privacy", href: "/" }, { label: "Terms", href: "/" }, { label: "Cookie Settings", href: "/" }] },
               ].map((group) => (
                 <div key={group.title}>
-                  <p className="mb-4 text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: "var(--gold)" }}>{group.title}</p>
+                  <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.28em", marginBottom: "16px" }}>{group.title}</p>
                   <ul className="space-y-3">
-                    {group.links.map((link) => (
-                      <li key={link}>
-                        <Link href="/" className="text-xs transition hover:opacity-80" style={{ color: "var(--text3)" }}>{link}</Link>
+                    {group.links.map(({ label, href }) => (
+                      <li key={label}>
+                        <Link href={href} className="transition hover:opacity-80" style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "12px", fontWeight: 400 }}>{label}</Link>
                       </li>
                     ))}
                   </ul>
@@ -434,8 +533,8 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex flex-col items-center justify-between gap-4 pt-8 md:flex-row" style={{ borderTop: "1px solid var(--border3)" }}>
-            <p className="text-xs" style={{ color: "var(--text4)" }}>© {new Date().getFullYear()} Happy Moments India. All rights reserved.</p>
-            <div className="flex items-center gap-2 text-xs" style={{ color: "var(--text4)" }}>
+            <p style={{ color: "var(--text4)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400 }}>© {new Date().getFullYear()} Happy Moments India. All rights reserved.</p>
+            <div className="flex items-center gap-2" style={{ color: "var(--text4)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400 }}>
               <Shield size={11} style={{ color: "var(--gold)" }} /> Verified vendor marketplace
             </div>
           </div>

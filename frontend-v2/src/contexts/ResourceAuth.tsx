@@ -47,32 +47,27 @@ export function ResourceAuthProvider({ children }: { children: React.ReactNode }
     const hash = await hashPassword(password);
 
     const { data, error } = await supabase
-      .from("crm_resources")
-      .select("id, vendor_id, resource_name, email, crm_admin, user_groups, is_active")
-      .eq("email", email.toLowerCase().trim())
-      .eq("password_hash", hash)
-      .single();
+      .rpc("verify_resource", { p_email: email, p_password_hash: hash });
 
-    if (error || !data) return { error: "Invalid email or password." };
-    if (!data.is_active) return { error: "Your account has been deactivated." };
+    if (error || !data || data.length === 0) return { error: "Invalid email or password." };
+    const row = data[0];
 
     const session: ResourceSession = {
-      resource_id: data.id,
-      vendor_id: data.vendor_id,
-      resource_name: data.resource_name,
-      email: data.email,
-      crm_admin: data.crm_admin as 'Y' | 'N',
-      user_groups: (data.user_groups || []) as CRMUserGroup[],
+      resource_id: row.id,
+      vendor_id: row.vendor_id,
+      resource_name: row.resource_name,
+      email: row.email,
+      crm_admin: row.crm_admin as 'Y' | 'N',
+      user_groups: (row.user_groups || []) as CRMUserGroup[],
     };
 
     localStorage.setItem("resource_session", JSON.stringify(session));
     setResource(session);
 
-    // Update last_login
     await supabase
       .from("crm_resources")
       .update({ last_login: new Date().toISOString() })
-      .eq("id", data.id);
+      .eq("id", row.id);
 
     return { error: null };
   };
