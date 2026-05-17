@@ -7,6 +7,7 @@ import { useResourceAuth } from "@/contexts/ResourceAuth";
 import OptyWizard from "./components/OptyWizard";
 import OptyDetailFull from "./components/OptyDetailFull";
 import { Plus, LayoutGrid, Table2, Search, Filter, Check } from "lucide-react";
+import { EmptyOpportunitiesIllustration } from "@/components/illustrations/EmptyOpportunitiesIllustration";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -150,8 +151,12 @@ export default function OpportunitiesPage({ vendorId }: Props) {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
+          <div className="flex flex-col items-center justify-center h-full gap-4 py-12">
+            <div className="w-32 h-32" style={{ color: "var(--crm-accent)" }}>
+              <EmptyOpportunitiesIllustration className="overflow-visible" />
+            </div>
             <p className="text-[13px] font-medium" style={{ color: "var(--crm-muted)" }}>No opportunities yet</p>
+            <p className="text-[11px]" style={{ color: "var(--crm-label)" }}>Add your first deal to start tracking your pipeline</p>
           </div>
         ) : view === "kanban" ? (
           <Kanban opties={filtered} onSelect={setSelected} />

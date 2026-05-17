@@ -2,6 +2,7 @@
 
 import { CRMLead, LeadStatus } from "@/lib/crm-types";
 import { PhoneIncoming } from "lucide-react";
+import { EmptyLeadsIllustration } from "@/components/illustrations/EmptyLeadsIllustration";
 import { Avatar } from "@/components/ui/Avatar";
 import { StatusPill } from "@/components/ui/StatusPill";
 
@@ -115,10 +116,9 @@ export default function LeadTable({ leads, loading, view, onSelect }: Props) {
   /* ── Empty state ───────────────────────────────────────────── */
   if (leads.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-24">
-        <div className="rounded-full p-5"
-          style={{ background: "var(--crm-surface)", border: "1px solid var(--border)" }}>
-          <PhoneIncoming size={28} style={{ color: "var(--crm-muted)" }} />
+      <div className="flex flex-col items-center gap-4 py-24">
+        <div className="w-32 h-32" style={{ color: "var(--crm-accent)" }}>
+          <EmptyLeadsIllustration className="overflow-visible" />
         </div>
         <p className="text-[13px] font-medium" style={{ color: "var(--crm-muted)" }}>No leads found</p>
         <p className="text-[11px]" style={{ color: "var(--crm-label)" }}>Create your first lead to get started</p>

@@ -5,6 +5,7 @@ import { CRMTerritory } from "@/lib/crm-types";
 import { getTerritories, createTerritory, updateTerritory, deleteTerritory } from "@/services/crm";
 import TerritoryForm from "./components/TerritoryForm";
 import { Plus, MapPin, Pencil, Trash2 } from "lucide-react";
+import { EmptyTerritoriesIllustration } from "@/components/illustrations/EmptyTerritoriesIllustration";
 
 interface Props { vendorId: string; }
 
@@ -89,14 +90,8 @@ export default function TerritoriesPage({ vendorId }: Props) {
           className="flex flex-col items-center gap-4 rounded-2xl py-24"
           style={{ background: "var(--crm-surface)", border: "1px solid var(--crm-border2)" }}
         >
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl"
-            style={{
-              background: "var(--crm-accent-soft)",
-              border: "1px solid var(--crm-border2)",
-            }}
-          >
-            <MapPin size={28} style={{ color: "var(--crm-accent)" }} />
+          <div className="w-36 h-36" style={{ color: "var(--crm-accent)" }}>
+            <EmptyTerritoriesIllustration className="overflow-visible" />
           </div>
           <div className="text-center">
             <p className="font-semibold" style={{ color: "var(--crm-text)" }}>No territories yet</p>

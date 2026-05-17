@@ -10,6 +10,7 @@ const contactedVendorsRoutes = require('./routes/contactedVendors');
 const couponsRoutes = require('./routes/coupons');
 const adminNotificationsRoutes = require('./routes/adminNotifications');
 const adminRoutes = require('./routes/admin');
+const customersRoutes = require('./routes/customers');
 const { initializeEmailService } = require('./services/emailService');
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/contacted-vendors', contactedVendorsRoutes);
 app.use('/api/coupons', couponsRoutes);
 app.use('/api/admin-notifications', adminNotificationsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/customers', customersRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

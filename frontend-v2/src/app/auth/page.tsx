@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ArrowLeft, ShieldCheck, Sparkles, Star } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, ShieldCheck, Sparkles, Star, RotateCcw, CheckCircle2 } from "lucide-react";
 import { useCustomerAuth } from "@/contexts/CustomerAuth";
 
-type Mode = "signin" | "signup";
+type Mode = "signin" | "signup" | "forgot";
+type ForgotStep = "email" | "otp" | "newpass";
 
 const STATS = [
   { value: "4,800+", label: "Verified vendors" },
@@ -17,7 +18,7 @@ const STATS = [
 
 export default function AuthPage() {
   const router = useRouter();
-  const { signIn, signUp } = useCustomerAuth();
+  const { signIn, signUp, sendResetOtp, verifyResetOtp, resetPassword } = useCustomerAuth();
 
   const [mode, setMode] = useState<Mode>("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,11 +26,36 @@ export default function AuthPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // Sign in / sign up fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Forgot password state
+  const [forgotStep, setForgotStep] = useState<ForgotStep>("email");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+
+  const resetForgot = () => {
+    setForgotStep("email");
+    setForgotEmail("");
+    setForgotOtp("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setError("");
+    setSuccess("");
+  };
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setError("");
+    setSuccess("");
+    if (m !== "forgot") resetForgot();
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +77,49 @@ export default function AuthPage() {
     if (err) { setError(err); return; }
     setSuccess("Account created! You can now sign in.");
     setMode("signin");
+  };
+
+  const handleForgotSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    const { error: err } = await sendResetOtp(forgotEmail);
+    setLoading(false);
+    if (err) { setError(err); return; }
+    setForgotStep("otp");
+    setSuccess(`Reset code sent to ${forgotEmail}`);
+  };
+
+  const handleForgotVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(""); setLoading(true);
+    const { error: err } = await verifyResetOtp(forgotEmail, forgotOtp);
+    setLoading(false);
+    if (err) { setError(err); return; }
+    setSuccess("");
+    setForgotStep("newpass");
+  };
+
+  const handleForgotResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (newPassword !== confirmNewPassword) { setError("Passwords do not match."); return; }
+    if (newPassword.length < 6) { setError("Password must be at least 6 characters."); return; }
+    setLoading(true);
+    const { error: err } = await resetPassword(forgotEmail, forgotOtp, newPassword);
+    setLoading(false);
+    if (err) { setError(err); return; }
+    setSuccess("Password reset successfully! Please sign in.");
+    resetForgot();
+    setMode("signin");
+  };
+
+  const inp = {
+    className: "w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition",
+    style: {
+      border: "1px solid var(--border2)",
+      background: "var(--bg)",
+      color: "var(--text)",
+    } as React.CSSProperties,
   };
 
   return (
@@ -118,29 +187,70 @@ export default function AuthPage() {
             <ArrowLeft size={13} /> Back to home
           </Link>
 
-          {/* Tab switcher */}
-          <div className="mb-8 flex rounded-2xl p-1.5" style={{ border: "1px solid var(--border2)", background: "var(--bg2)" }}>
-            {(["signin", "signup"] as Mode[]).map((m) => (
-              <button key={m} onClick={() => { setMode(m); setError(""); setSuccess(""); }}
-                className="flex-1 rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition"
-                style={{
-                  background: mode === m ? "rgba(201,168,76,0.12)" : "transparent",
-                  color:      mode === m ? "var(--gold)" : "var(--text3)",
-                  border:     mode === m ? "1px solid rgba(201,168,76,0.3)" : "1px solid transparent",
-                }}>
-                {m === "signin" ? "Sign in" : "Create account"}
-              </button>
-            ))}
-          </div>
+          {/* Tab switcher — hidden in forgot mode */}
+          {mode !== "forgot" && (
+            <div className="mb-8 flex rounded-2xl p-1.5" style={{ border: "1px solid var(--border2)", background: "var(--bg2)" }}>
+              {(["signin", "signup"] as Mode[]).map((m) => (
+                <button key={m} onClick={() => switchMode(m)}
+                  className="flex-1 rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition"
+                  style={{
+                    background: mode === m ? "rgba(201,168,76,0.12)" : "transparent",
+                    color:      mode === m ? "var(--gold)" : "var(--text3)",
+                    border:     mode === m ? "1px solid rgba(201,168,76,0.3)" : "1px solid transparent",
+                  }}>
+                  {m === "signin" ? "Sign in" : "Create account"}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div className="mb-6">
-            <h2 className="font-display text-3xl" style={{ color: "var(--text)" }}>
-              {mode === "signin" ? "Welcome back" : "Join Happy Moments"}
-            </h2>
-            <p className="mt-1 text-xs" style={{ color: "var(--text3)" }}>
-              {mode === "signin" ? "Sign in to access your saved vendors and bookings." : "Create a free account to start planning your event."}
-            </p>
-          </div>
+          {/* ── Forgot password header ── */}
+          {mode === "forgot" && (
+            <div className="mb-8">
+              <button onClick={() => switchMode("signin")} className="mb-5 flex items-center gap-1.5 text-xs font-semibold transition hover:opacity-70" style={{ color: "var(--text3)" }}>
+                <ArrowLeft size={13} /> Back to sign in
+              </button>
+
+              {/* Step indicator */}
+              <div className="mb-6 flex items-center gap-2">
+                {(["email", "otp", "newpass"] as ForgotStep[]).map((step, i) => (
+                  <div key={step} className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold transition"
+                      style={{
+                        background: forgotStep === step ? "var(--gold)" : ["email","otp","newpass"].indexOf(forgotStep) > i ? "rgba(201,168,76,0.2)" : "var(--bg2)",
+                        color: forgotStep === step ? "var(--bg)" : ["email","otp","newpass"].indexOf(forgotStep) > i ? "var(--gold)" : "var(--text4)",
+                        border: forgotStep === step ? "none" : "1px solid var(--border2)",
+                      }}>
+                      {["email","otp","newpass"].indexOf(forgotStep) > i ? <CheckCircle2 size={12} /> : i + 1}
+                    </div>
+                    {i < 2 && <div className="h-px w-6 transition" style={{ background: ["email","otp","newpass"].indexOf(forgotStep) > i ? "var(--gold)" : "var(--border2)" }} />}
+                  </div>
+                ))}
+                <span className="ml-1 text-xs" style={{ color: "var(--text3)" }}>
+                  {forgotStep === "email" ? "Enter email" : forgotStep === "otp" ? "Verify code" : "New password"}
+                </span>
+              </div>
+
+              <h2 className="font-display text-3xl" style={{ color: "var(--text)" }}>Reset password</h2>
+              <p className="mt-1 text-xs" style={{ color: "var(--text3)" }}>
+                {forgotStep === "email" && "Enter your account email. We'll send a 6-digit reset code."}
+                {forgotStep === "otp" && `Enter the 6-digit code sent to ${forgotEmail}.`}
+                {forgotStep === "newpass" && "Choose a strong new password for your account."}
+              </p>
+            </div>
+          )}
+
+          {/* ── Normal mode header ── */}
+          {mode !== "forgot" && (
+            <div className="mb-6">
+              <h2 className="font-display text-3xl" style={{ color: "var(--text)" }}>
+                {mode === "signin" ? "Welcome back" : "Join Happy Moments"}
+              </h2>
+              <p className="mt-1 text-xs" style={{ color: "var(--text3)" }}>
+                {mode === "signin" ? "Sign in to access your saved vendors and bookings." : "Create a free account to start planning your event."}
+              </p>
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 rounded-xl px-4 py-3 text-xs" style={{ border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.08)", color: "#f87171" }}>{error}</div>
@@ -149,75 +259,140 @@ export default function AuthPage() {
             <div className="mb-4 rounded-xl px-4 py-3 text-xs" style={{ border: "1px solid rgba(74,222,128,0.3)", background: "rgba(74,222,128,0.08)", color: "#4ade80" }}>{success}</div>
           )}
 
-          {/* Input styles */}
-          {(() => {
-            const inp = {
-              className: "w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition",
-              style: {
-                border: "1px solid var(--border2)",
-                background: "var(--bg)",
-                color: "var(--text)",
-              } as React.CSSProperties,
-            };
-
-            if (mode === "signin") return (
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div>
-                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Email</label>
-                  <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" {...inp} />
+          {/* ── Sign In form ── */}
+          {mode === "signin" && (
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Email</label>
+                <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" {...inp} />
+              </div>
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Password</label>
+                  <button type="button" onClick={() => { setForgotEmail(email); switchMode("forgot"); }}
+                    className="text-[10px] font-semibold transition hover:opacity-70" style={{ color: "var(--gold)" }}>
+                    Forgot password?
+                  </button>
                 </div>
+                <div className="relative">
+                  <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" {...inp} className={inp.className + " pr-10"} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 transition hover:opacity-70" style={{ color: "var(--text3)" }}>
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+                style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
+                {loading ? "Signing in..." : "Sign in"}
+              </button>
+            </form>
+          )}
+
+          {/* ── Sign Up form ── */}
+          {mode === "signup" && (
+            <form onSubmit={handleSignUp} className="space-y-4">
+              {[
+                { label: "Full name",      type: "text",  value: name,   set: setName,   ph: "Your full name" },
+                { label: "Email",          type: "email", value: email,  set: setEmail,  ph: "you@example.com" },
+                { label: "Mobile number",  type: "tel",   value: mobile, set: setMobile, ph: "+91 98765 43210" },
+              ].map(({ label, type, value, set, ph }) => (
+                <div key={label}>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>{label}</label>
+                  <input type={type} required value={value} onChange={(e) => set(e.target.value)} placeholder={ph} {...inp} />
+                </div>
+              ))}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Password</label>
                   <div className="relative">
-                    <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" {...inp} className={inp.className + " pr-10"} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 transition hover:opacity-70" style={{ color: "var(--text3)" }}>
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 chars" {...inp} className={inp.className + " pr-9"} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }}>
+                      {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
                   </div>
                 </div>
-                <button type="submit" disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
-                  style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
-                  {loading ? "Signing in..." : "Sign in"}
-                </button>
-              </form>
-            );
-
-            return (
-              <form onSubmit={handleSignUp} className="space-y-4">
-                {[
-                  { label: "Full name",      type: "text",  value: name,   set: setName,   ph: "Your full name" },
-                  { label: "Email",          type: "email", value: email,  set: setEmail,  ph: "you@example.com" },
-                  { label: "Mobile number",  type: "tel",   value: mobile, set: setMobile, ph: "+91 98765 43210" },
-                ].map(({ label, type, value, set, ph }) => (
-                  <div key={label}>
-                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>{label}</label>
-                    <input type={type} required value={value} onChange={(e) => set(e.target.value)} placeholder={ph} {...inp} />
-                  </div>
-                ))}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Password</label>
-                    <div className="relative">
-                      <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 6 chars" {...inp} className={inp.className + " pr-9"} />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }}>
-                        {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Confirm</label>
-                    <input type={showPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" {...inp} />
-                  </div>
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Confirm</label>
+                  <input type={showPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repeat password" {...inp} />
                 </div>
-                <button type="submit" disabled={loading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
-                  style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
-                  {loading ? "Creating account..." : <><Sparkles size={13} /> Create free account</>}
-                </button>
-              </form>
-            );
-          })()}
+              </div>
+              <button type="submit" disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+                style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
+                {loading ? "Creating account..." : <><Sparkles size={13} /> Create free account</>}
+              </button>
+            </form>
+          )}
+
+          {/* ── Forgot password: Step 1 — Email ── */}
+          {mode === "forgot" && forgotStep === "email" && (
+            <form onSubmit={handleForgotSendOtp} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Account Email</label>
+                <input type="email" required value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="you@example.com" {...inp} />
+              </div>
+              <button type="submit" disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60"
+                style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
+                {loading ? "Sending..." : "Send reset code"}
+              </button>
+            </form>
+          )}
+
+          {/* ── Forgot password: Step 2 — OTP ── */}
+          {mode === "forgot" && forgotStep === "otp" && (
+            <form onSubmit={handleForgotVerifyOtp} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>6-Digit Reset Code</label>
+                <input
+                  type="text"
+                  required
+                  value={forgotOtp}
+                  onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="••••••"
+                  maxLength={6}
+                  inputMode="numeric"
+                  className="w-full rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] focus:outline-none"
+                  style={{ border: "1px solid var(--border2)", background: "var(--bg)", color: "var(--text)" }}
+                />
+                <p className="mt-2 text-center text-[10px]" style={{ color: "var(--text3)" }}>Sent to {forgotEmail}</p>
+              </div>
+              <button type="submit" disabled={loading || forgotOtp.length < 6}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60"
+                style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
+                {loading ? "Verifying..." : "Verify code"}
+              </button>
+              <button type="button" onClick={() => setForgotStep("email")} className="w-full text-center text-xs transition hover:opacity-70" style={{ color: "var(--text3)" }}>
+                <RotateCcw size={11} className="inline mr-1" />
+                Resend or change email
+              </button>
+            </form>
+          )}
+
+          {/* ── Forgot password: Step 3 — New password ── */}
+          {mode === "forgot" && forgotStep === "newpass" && (
+            <form onSubmit={handleForgotResetPassword} className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>New Password</label>
+                <div className="relative">
+                  <input type={showPassword ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min. 6 characters" {...inp} className={inp.className + " pr-10"} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text3)" }}>
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: "var(--text3)" }}>Confirm New Password</label>
+                <input type={showPassword ? "text" : "password"} required value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="Repeat password" {...inp} />
+              </div>
+              <button type="submit" disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-60"
+                style={{ background: "var(--gold)", color: "var(--bg)", boxShadow: "0 8px 24px rgba(201,168,76,0.25)" }}>
+                {loading ? "Resetting..." : <><CheckCircle2 size={14} /> Set new password</>}
+              </button>
+            </form>
+          )}
 
           <p className="mt-6 text-center text-[10px]" style={{ color: "var(--text4)" }}>
             By continuing, you agree to our{" "}

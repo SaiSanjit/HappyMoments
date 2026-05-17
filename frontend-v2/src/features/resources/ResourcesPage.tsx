@@ -5,6 +5,7 @@ import { CRMResource } from "@/lib/crm-types";
 import { getResources, updateResource, deleteResource } from "@/services/crm";
 import ResourceForm from "./components/ResourceForm";
 import { Plus, Users, Pencil, Trash2, Shield } from "lucide-react";
+import { EmptyTeamIllustration } from "@/components/illustrations/EmptyTeamIllustration";
 
 interface Props { vendorId: string; }
 
@@ -88,14 +89,8 @@ export default function ResourcesPage({ vendorId }: Props) {
           className="flex flex-col items-center gap-4 rounded-2xl py-24"
           style={{ background: "var(--crm-surface)", border: "1px solid var(--crm-border2)" }}
         >
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl"
-            style={{
-              background: "var(--crm-accent-soft)",
-              border: "1px solid var(--crm-border2)",
-            }}
-          >
-            <Users size={28} style={{ color: "var(--crm-accent)" }} />
+          <div className="w-36 h-36" style={{ color: "var(--crm-accent)" }}>
+            <EmptyTeamIllustration className="overflow-visible" />
           </div>
           <div className="text-center">
             <p className="font-semibold" style={{ color: "var(--crm-text)" }}>No team members yet</p>

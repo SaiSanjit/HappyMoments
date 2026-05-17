@@ -8,6 +8,7 @@ import {
   ChevronDown, Sparkles, CheckCircle,
 } from "lucide-react";
 import { getAllVendors, VendorFilters, getVendorCatalogImages } from "@/services/vendors";
+import { EmptyVendorsIllustration } from "@/components/illustrations/EmptyVendorsIllustration";
 import { Vendor } from "@/lib/supabase";
 import MarketingNavbar from "@/components/home/MarketingNavbar";
 
@@ -381,9 +382,8 @@ export default function DiscoverPage() {
               </div>
             ) : vendors.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full"
-                  style={{ border: "1px solid var(--border2)", background: "var(--bg2)", color: "var(--text3)" }}>
-                  <Search size={22} />
+                <div className="w-40 h-40 mb-2" style={{ color: "var(--gold)" }}>
+                  <EmptyVendorsIllustration className="overflow-visible" />
                 </div>
                 <h3 className="text-base font-semibold" style={{ color: "var(--text)" }}>No vendors found</h3>
                 <p className="mt-2 max-w-xs text-xs" style={{ color: "var(--text3)" }}>

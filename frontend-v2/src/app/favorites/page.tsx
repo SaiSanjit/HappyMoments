@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/layout/Navbar";
 import VendorCard from "@/components/shared/VendorCard";
 import { Heart, LayoutGrid } from "lucide-react";
+import { EmptyFavoritesIllustration } from "@/components/illustrations/EmptyFavoritesIllustration";
 import { getAllVendors } from "@/services/vendors";
 import { Vendor } from "@/lib/supabase";
 import Link from "next/link";
@@ -60,9 +61,9 @@ export default function FavoritesPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="py-40 text-center">
-                        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300">
-                            <Heart size={40} />
+                    <div className="py-24 text-center flex flex-col items-center">
+                        <div className="w-44 h-44 mb-4" style={{ color: "#f43f5e" }}>
+                            <EmptyFavoritesIllustration className="overflow-visible" />
                         </div>
                         <h3 className="text-2xl font-black mb-2">Create your first wishlist</h3>
                         <p className="text-brand-muted mb-8">Tap the heart on any vendor you love to save them here.</p>

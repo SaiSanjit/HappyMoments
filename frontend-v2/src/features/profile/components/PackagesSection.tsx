@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, Package } from "lucide-react";
+import { EmptyPackagesIllustration } from "@/components/illustrations/EmptyPackagesIllustration";
 import { PackageItem } from "../ProfilePage";
 
 interface Props {
@@ -63,7 +64,9 @@ export default function PackagesSection({ packages, onChange }: Props) {
             className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 gap-2"
             style={{ borderColor: "var(--border2)" }}
           >
-            <Package size={24} style={{ color: "var(--text-muted)", opacity: 0.5 }} />
+            <div className="w-24 h-24" style={{ color: "var(--gold)" }}>
+              <EmptyPackagesIllustration className="overflow-visible" />
+            </div>
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>No packages yet</p>
             <button
               onClick={() => setAdding(true)}

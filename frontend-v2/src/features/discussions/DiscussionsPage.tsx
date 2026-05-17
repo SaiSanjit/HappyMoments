@@ -6,6 +6,7 @@ import {
   Clock, ShieldCheck, Plus, LayoutTemplate, IndianRupee,
   X,
 } from "lucide-react";
+import { EmptyDiscussionsIllustration } from "@/components/illustrations/EmptyDiscussionsIllustration";
 import {
   getVendorDiscussions, getMessages, sendTextMessage, sendCardMessage,
   subscribeToMessages, markMessagesRead, confirmAgreement,
@@ -152,8 +153,10 @@ export default function DiscussionsPage({ vendorId, vendorName = "Your Venue", v
 
         <div className="flex-1 overflow-y-auto">
           {discussions.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 px-5 text-center gap-3">
-              <MessageCircle size={28} style={{ color: "var(--text4)" }} />
+            <div className="flex flex-col items-center justify-center py-10 px-5 text-center gap-4">
+              <div className="w-28 h-28" style={{ color: "var(--gold)" }}>
+                <EmptyDiscussionsIllustration className="overflow-visible" />
+              </div>
               <p className="text-xs" style={{ color: "var(--text3)" }}>
                 No discussions yet. Customers can start one from your vendor profile.
               </p>

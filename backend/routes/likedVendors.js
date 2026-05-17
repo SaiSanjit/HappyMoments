@@ -193,9 +193,9 @@ router.get('/get-liked-vendors/:customer_id', async (req, res) => {
     // First, get all liked vendor IDs for this customer
     const { data: likedData, error: likedError } = await supabase
       .from('customer_liked_vendors')
-      .select('vendor_id, liked_at')
+      .select('vendor_id, created_at')
       .eq('customer_id', parseInt(customer_id))
-      .order('liked_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (likedError) {
       console.error('Error fetching liked vendors:', likedError);
@@ -296,9 +296,9 @@ router.get('/get-liked-vendors/:customer_id', async (req, res) => {
         avatar_url: null,
         cover_image_url: null,
         quick_intro: '',
-        liked_at: liked.liked_at
+        liked_at: liked.created_at
       }));
-      
+
       return res.json({
         success: true,
         message: `Found ${likedData.length} liked vendors`,
@@ -313,7 +313,7 @@ router.get('/get-liked-vendors/:customer_id', async (req, res) => {
       if (vendor) {
         return {
           ...vendor,
-          liked_at: liked.liked_at
+          liked_at: liked.created_at
         };
       } else {
         console.log(`Warning: Vendor ${liked.vendor_id} not found in database`);
@@ -360,7 +360,7 @@ router.get('/check-like/:customer_id/:vendor_id', async (req, res) => {
 
     const { data, error } = await supabase
       .from('customer_liked_vendors')
-      .select('id, liked_at')
+      .select('id, created_at')
       .eq('customer_id', parseInt(customer_id))
       .eq('vendor_id', vendor_id)
       .single();
