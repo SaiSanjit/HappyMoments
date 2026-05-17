@@ -435,12 +435,7 @@ export default function VendorOnboardingPage() {
         {/* Logo */}
         <div className="px-8 py-7" style={{ borderBottom: "1px solid var(--border3)" }}>
           <Link href="/" className="flex items-center gap-3">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black"
-              style={{ background: "linear-gradient(135deg, #c9a84c 0%, #e8d5a3 100%)", color: "#070503" }}
-            >
-              HM
-            </div>
+            <img src="/logo.svg" alt="Happy Moments" style={{ height: 44, width: "auto" }} />
             <div>
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text)" }}>Happy Moments</p>
               <p className="text-[10px]" style={{ color: "var(--text4)" }}>Vendor Portal</p>

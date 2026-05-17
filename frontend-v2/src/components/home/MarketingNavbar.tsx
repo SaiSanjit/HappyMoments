@@ -75,24 +75,11 @@ export default function MarketingNavbar() {
 
           {/* ── Logo ── */}
           <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 11,
-                fontWeight: 900,
-                color: "#070503",
-                letterSpacing: "0.04em",
-                flexShrink: 0,
-              }}
-            >
-              HM
-            </div>
+            <img
+              src="/logo.svg"
+              alt="Happy Moments"
+              style={{ height: 42, width: "auto", flexShrink: 0 }}
+            />
             <span
               className="brand-text hidden sm:block"
               style={{

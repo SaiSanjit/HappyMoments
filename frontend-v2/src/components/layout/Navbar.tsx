@@ -26,9 +26,7 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto flex items-center justify-between">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-1">
-                    <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
-                        <span className="text-white font-black text-xl italic">H</span>
-                    </div>
+                    <img src="/logo.svg" alt="Happy Moments" style={{ height: 42, width: "auto" }} />
                     <span className={cn(
                         "text-xl font-black tracking-tighter hidden sm:block",
                         isScrolled ? "text-brand-primary" : "text-white"

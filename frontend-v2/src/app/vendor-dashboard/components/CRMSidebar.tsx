@@ -203,8 +203,12 @@ export default function CRMSidebar({ activeTab, onTabChange, onClose, mobile }: 
     >
       {/* Logo */}
       <div className="flex flex-col items-center gap-4 shrink-0 w-full">
-        <div className="w-14 h-14 flex items-center justify-center rounded-2xl bg-white/20 shadow-inner cursor-pointer select-none">
-          <span className="text-[10px] font-black tracking-widest text-white" style={{ fontFamily: '"Ethnocentric Rg", system-ui, sans-serif' }}>HM</span>
+        <div className="flex items-center justify-center cursor-pointer select-none px-1" style={{ width: 68 }}>
+          <img
+            src="/logo.svg"
+            alt="Happy Moments"
+            style={{ width: 60, height: "auto", filter: "brightness(0) invert(1)", opacity: 0.95 }}
+          />
         </div>
         <div className="w-8 h-0.5 bg-white/40 rounded-full" />
       </div>
