@@ -95,3 +95,35 @@ CREATE POLICY "block_anon_vendor_applications"
 -- -----------------------------------------------------------------------------
 ALTER TABLE vendors
   ADD COLUMN IF NOT EXISTS additional_info jsonb DEFAULT '{}';
+
+
+-- -----------------------------------------------------------------------------
+-- 6. vendor_media — portfolio/catalog images per vendor
+--    Queried by: frontend-v2/src/services/vendors.ts → getVendorCatalogImages
+--    NOTE: vendors.vendor_id is integer (GENERATED ALWAYS AS IDENTITY), not uuid.
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS vendor_media (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  vendor_id         integer     NOT NULL REFERENCES vendors(vendor_id) ON DELETE CASCADE,
+  media_url         text        NOT NULL,
+  gdrive_file_id    text,
+  original_filename text,
+  file_size         bigint,
+  compressed_size   bigint,
+  compression_ratio numeric,
+  media_type        text        NOT NULL DEFAULT 'image',
+  order_index       integer     NOT NULL DEFAULT 0,
+  upload_status     text        NOT NULL DEFAULT 'completed'
+                                CHECK (upload_status IN ('pending', 'completed', 'failed')),
+  created_at        timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_media_vendor_status
+  ON vendor_media (vendor_id, upload_status, order_index ASC);
+
+ALTER TABLE vendor_media ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "public_read_vendor_media"
+  ON vendor_media FOR SELECT
+  TO anon, authenticated
+  USING (upload_status = 'completed');

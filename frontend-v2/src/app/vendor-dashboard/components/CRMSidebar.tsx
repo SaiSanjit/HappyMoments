@@ -18,6 +18,7 @@ import {
   LogOut,
   MoreHorizontal,
   ChevronRight,
+  UserCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -31,6 +32,7 @@ interface SidebarItem {
 
 const NAV_ITEMS: SidebarItem[] = [
   { key: "dashboard",     label: "Dashboard",     icon: LayoutDashboard, group: "CRM_DASHBOARDS",    tier: "primary"   },
+  { key: "profile",       label: "Profile",       icon: UserCircle,                                  tier: "primary"   },
   { key: "leads",         label: "Leads",         icon: PhoneIncoming,   group: "CRM_LEADS",         tier: "primary"   },
   { key: "opportunities", label: "Opportunities", icon: TrendingUp,      group: "CRM_OPPORTUNITIES", tier: "primary"   },
   { key: "discussions",   label: "Discussions",   icon: MessagesSquare,                              tier: "primary"   },
@@ -137,7 +139,7 @@ export default function CRMSidebar({ activeTab, onTabChange, onClose, mobile }: 
   // ── Mobile flat list ──────────────────────────────────────────────────────
   if (mobile) {
     const groups = [
-      { label: "Overview",       keys: ["dashboard"] },
+      { label: "Overview",       keys: ["dashboard", "profile"] },
       { label: "Sales",          keys: ["leads", "opportunities"] },
       { label: "Communications", keys: ["discussions", "chat"] },
       { label: "Management",     keys: ["worklist", "resources", "territories"] },

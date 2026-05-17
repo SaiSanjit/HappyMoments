@@ -14,8 +14,9 @@ import TerritoriesPage from "@/features/territories/TerritoriesPage";
 import ChatsPage from "@/features/chats/ChatsPage";
 import WorkListPage from "@/features/worklist/WorkListPage";
 import DiscussionsPage from "@/features/discussions/DiscussionsPage";
+import ProfilePage from "@/features/profile/ProfilePage";
 
-type Tab = "dashboard" | "leads" | "opportunities" | "discussions" | "chat" | "worklist" | "resources" | "territories";
+type Tab = "dashboard" | "leads" | "opportunities" | "discussions" | "chat" | "worklist" | "resources" | "territories" | "profile";
 
 const PAGE_TITLES: Record<Tab, string> = {
   dashboard:     "Dashboard",
@@ -26,6 +27,7 @@ const PAGE_TITLES: Record<Tab, string> = {
   worklist:      "Work List",
   resources:     "Resources",
   territories:   "Territories",
+  profile:       "Studio Profile",
 };
 
 function VendorDashboardContent() {
@@ -72,6 +74,7 @@ function VendorDashboardContent() {
       case "worklist":      return <WorkListPage vendorId={vendorId} />;
       case "resources":     return <ResourcesPage vendorId={vendorId} />;
       case "territories":   return <TerritoriesPage vendorId={vendorId} />;
+      case "profile":       return <ProfilePage vendorId={vendorId} />;
       default:              return <DashboardPage vendorId={vendorId} />;
     }
   };

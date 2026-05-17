@@ -37,7 +37,17 @@ export default function VendorProfilePage() {
       if (!data) setNotFound(true);
       else {
         setVendor(data);
-        getVendorCatalogImages(data.vendor_id).then(setCatalogImages);
+        // catalog_images_metadata holds vendor-ordered photos (set via profile editor).
+        // It lives on the vendor record but isn't in the Vendor type, so we cast.
+        const meta = (data as unknown as Record<string, unknown>).catalog_images_metadata;
+        if (Array.isArray(meta) && meta.length > 0) {
+          setCatalogImages(
+            (meta as Array<{ media_url: string }>).map((m) => m.media_url).filter(Boolean)
+          );
+        } else {
+          // Fallback for vendors without catalog_images_metadata (legacy / bulk-uploaded)
+          getVendorCatalogImages(data.vendor_id).then(setCatalogImages);
+        }
       }
       setLoading(false);
     });
