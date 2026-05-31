@@ -4,6 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase, Customer } from "@/lib/supabase";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+const SESSION_KEY = "customer_id";
+const REMEMBER_KEY = "customer_remember";
 
 interface AuthState {
   customer: Customer | null;
@@ -11,13 +13,15 @@ interface AuthState {
 }
 
 interface CustomerAuthContextType extends AuthState {
-  signIn: (email: string, password: string) => Promise<{ customer: Customer | null; error: string | null }>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ customer: Customer | null; error: string | null }>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (name: string, email: string, password: string, mobile: string) => Promise<{ error: string | null }>;
   signOut: () => void;
   sendResetOtp: (email: string) => Promise<{ error: string | null }>;
   verifyResetOtp: (email: string, otp: string) => Promise<{ error: string | null }>;
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ error: string | null }>;
   updateProfile: (updates: Partial<Pick<Customer, "full_name" | "mobile_number" | "location">>) => Promise<{ error: string | null }>;
+  setCustomerFromOAuth: (customer: Customer, rememberMe?: boolean) => void;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType | undefined>(undefined);
@@ -37,7 +41,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const id = localStorage.getItem("customer_id");
+    const id = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
     if (!id) { setLoading(false); return; }
 
     supabase
@@ -47,23 +51,41 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
       .single()
       .then(({ data, error }) => {
         if (data && !error) setCustomer(data as Customer);
-        else localStorage.removeItem("customer_id");
+        else {
+          localStorage.removeItem(SESSION_KEY);
+          sessionStorage.removeItem(SESSION_KEY);
+        }
         setLoading(false);
       });
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     const hash = encodePassword(password);
     const { data, error } = await supabase
       .rpc("verify_customer", { p_email: email.toLowerCase().trim(), p_password_hash: hash });
 
     if (error || !data || data.length === 0) return { customer: null, error: "Invalid email or password." };
-    const data0 = data[0];
+    const c = data[0] as Customer;
 
-    const c = data0 as Customer;
-    localStorage.setItem("customer_id", String(c.id));
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(SESSION_KEY, String(c.id));
     setCustomer(c);
     return { customer: c, error: null };
+  };
+
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  };
+
+  const setCustomerFromOAuth = (c: Customer, rememberMe = true) => {
+    localStorage.setItem(SESSION_KEY, String(c.id));
+    if (rememberMe) localStorage.setItem(REMEMBER_KEY, "1");
+    setCustomer(c);
   };
 
   const signUp = async (name: string, email: string, password: string, mobile: string) => {
@@ -81,7 +103,9 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   };
 
   const signOut = () => {
-    localStorage.removeItem("customer_id");
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     setCustomer(null);
   };
 
@@ -130,7 +154,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
   };
 
   return (
-    <CustomerAuthContext.Provider value={{ customer, loading, signIn, signUp, signOut, sendResetOtp, verifyResetOtp, resetPassword, updateProfile }}>
+    <CustomerAuthContext.Provider value={{ customer, loading, signIn, signInWithGoogle, signUp, signOut, sendResetOtp, verifyResetOtp, resetPassword, updateProfile, setCustomerFromOAuth }}>
       {children}
     </CustomerAuthContext.Provider>
   );

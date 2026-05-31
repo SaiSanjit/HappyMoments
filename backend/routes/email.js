@@ -8,7 +8,6 @@ const {
   sendContactNotificationEmail,
   emailTemplates
 } = require('../services/emailService');
-// emailTemplates used by inline OTP routes below
 const { supabase } = require('../config/supabase');
 
 const router = express.Router();
@@ -824,25 +823,12 @@ router.post('/send-customer-reset-otp', async (req, res) => {
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    const html = `
-      <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;background:#0a0804;border-radius:16px;border:1px solid #2a2218;">
-        <div style="text-align:center;margin-bottom:24px;">
-          <div style="display:inline-block;background:linear-gradient(135deg,#c9a84c,#e8d5a3);border-radius:12px;padding:10px 18px;font-weight:900;font-size:18px;color:#070503;letter-spacing:1px;">HM</div>
-        </div>
-        <h2 style="color:#e8d5a3;font-size:22px;margin:0 0 8px;">Reset your password</h2>
-        <p style="color:#8a7a5a;font-size:14px;margin:0 0 28px;">Hi ${customer.full_name || 'there'}, use this code to reset your Happy Moments account password.</p>
-        <div style="text-align:center;background:#1a1408;border:1px solid #3a2e1a;border-radius:12px;padding:28px;margin-bottom:24px;">
-          <span style="font-size:42px;font-weight:900;letter-spacing:12px;color:#c9a84c;">${otp}</span>
-        </div>
-        <p style="color:#5a4e32;font-size:12px;text-align:center;margin:0;">This code expires in <strong style="color:#8a7a5a;">10 minutes</strong>. If you did not request this, please ignore.</p>
-      </div>
-    `;
-
+    const template = emailTemplates.customerResetOtp(customer.full_name, otp, email);
     const result = await sendEmail({
       to: email,
-      subject: `${otp} — your Happy Moments password reset code`,
-      html,
-      text: `Your Happy Moments password reset code is: ${otp}\n\nThis code expires in 10 minutes. If you didn't request this, ignore this email.`,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
     });
 
     if (!result.success) {
@@ -894,6 +880,99 @@ router.post('/verify-customer-reset-otp', async (req, res) => {
   }
 });
 
-// Export the store so customers route can access it
+// ── Resource (CRM Team) Password Reset OTP ─────────────────────────────────
+
+const resourceResetOtpStore = new Map();
+
+// POST /api/email/send-resource-reset-otp
+router.post('/send-resource-reset-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'email is required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email address' });
+    }
+
+    const { data: resource } = await supabase
+      .from('crm_resources')
+      .select('id, resource_name')
+      .ilike('email', email.trim())
+      .single();
+
+    // Always return success to prevent email enumeration
+    if (!resource) {
+      return res.json({ success: true, message: 'If an account exists, a reset code has been sent.' });
+    }
+
+    const otp = generateOtp();
+    resourceResetOtpStore.set(email.toLowerCase().trim(), {
+      otp,
+      resourceId: resource.id,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+
+    const template = emailTemplates.customerResetOtp(resource.resource_name, otp, email);
+    const result = await sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+
+    if (!result.success) {
+      return res.status(500).json({ success: false, message: 'Failed to send reset code' });
+    }
+
+    console.log(`📧 Resource reset OTP sent to: ${email}`);
+    res.json({ success: true, message: 'If an account exists, a reset code has been sent.' });
+  } catch (error) {
+    console.error('❌ send-resource-reset-otp error:', error);
+    res.status(500).json({ success: false, message: 'Failed to send reset code' });
+  }
+});
+
+// POST /api/email/verify-resource-reset-otp
+router.post('/verify-resource-reset-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'email and otp are required' });
+    }
+
+    const key = email.toLowerCase().trim();
+    const stored = resourceResetOtpStore.get(key);
+
+    if (!stored) {
+      return res.status(404).json({ success: false, message: 'Code not found. Please request a new one.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      resourceResetOtpStore.delete(key);
+      return res.status(400).json({ success: false, message: 'Code has expired. Please request a new one.' });
+    }
+
+    if (stored.otp !== String(otp).trim()) {
+      return res.status(400).json({ success: false, message: 'Incorrect code. Please try again.' });
+    }
+
+    stored.verified = true;
+    resourceResetOtpStore.set(key, stored);
+
+    console.log(`✅ Resource reset OTP verified: ${email}`);
+    res.json({ success: true, message: 'Code verified successfully' });
+  } catch (error) {
+    console.error('❌ verify-resource-reset-otp error:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify code' });
+  }
+});
+
+// Export the stores so other routes can access them
 module.exports = router;
 module.exports.customerResetOtpStore = customerResetOtpStore;
+module.exports.resourceResetOtpStore = resourceResetOtpStore;

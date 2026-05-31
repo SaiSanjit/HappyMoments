@@ -4,13 +4,15 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { VendorSession } from "@/lib/crm-types";
 
+const SESSION_KEY = "vendor_session";
+
 interface VendorAuthContextType {
   vendor: VendorSession | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   sendOTP: (email: string) => Promise<{ error: string | null }>;
-  verifyOTP: (email: string, token: string) => Promise<{ error: string | null }>;
+  verifyOTP: (email: string, token: string, rememberMe?: boolean) => Promise<{ error: string | null }>;
   handleOAuthCallback: () => Promise<{ error: string | null }>;
   signOut: () => void;
 }
@@ -45,20 +47,22 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("vendor_session");
+      const raw = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
       if (raw) setVendor(JSON.parse(raw) as VendorSession);
     } catch {
-      localStorage.removeItem("vendor_session");
+      localStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
     }
     setLoading(false);
   }, []);
 
-  const saveSession = (session: VendorSession) => {
-    localStorage.setItem("vendor_session", JSON.stringify(session));
+  const saveSession = (session: VendorSession, rememberMe = true) => {
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(SESSION_KEY, JSON.stringify(session));
     setVendor(session);
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
@@ -69,7 +73,7 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
     const vendorSession = await fetchVendorByEmail(email);
     if (!vendorSession) return { error: "No vendor account found for this email." };
 
-    saveSession(vendorSession);
+    saveSession(vendorSession, rememberMe);
     return { error: null };
   };
 
@@ -98,7 +102,7 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
     return { error: null };
   };
 
-  const verifyOTP = async (email: string, token: string) => {
+  const verifyOTP = async (email: string, token: string, rememberMe = false) => {
     const { error } = await supabase.auth.verifyOtp({
       email: email.trim().toLowerCase(),
       token: token.trim(),
@@ -110,7 +114,7 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
     const vendorSession = await fetchVendorByEmail(email);
     if (!vendorSession) return { error: "Vendor account not found for this email." };
 
-    saveSession(vendorSession);
+    saveSession(vendorSession, rememberMe);
     return { error: null };
   };
 
@@ -127,12 +131,13 @@ export function VendorAuthProvider({ children }: { children: React.ReactNode }) 
       return { error: "No vendor account is linked to this Google account. Please contact support or sign in with your username." };
     }
 
-    saveSession(vendorSession);
+    saveSession(vendorSession, true);
     return { error: null };
   };
 
   const signOut = () => {
-    localStorage.removeItem("vendor_session");
+    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     setVendor(null);
   };
 

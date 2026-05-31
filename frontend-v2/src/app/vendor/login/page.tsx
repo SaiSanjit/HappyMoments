@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Eye, EyeOff, ArrowLeft, Mail, KeyRound, TrendingUp,
@@ -45,6 +45,7 @@ export default function VendorLoginPage() {
   const [mode, setMode] = useState<LoginMode>("password");
   const [otpStep, setOtpStep] = useState<OtpStep>("email");
   const [forgotStage, setForgotStage] = useState<ForgotStage>("idle");
+  const [rememberMe, setRememberMe] = useState(false);
 
   // Password mode
   const [email, setEmail] = useState("");
@@ -67,14 +68,14 @@ export default function VendorLoginPage() {
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault(); reset(); setLoading(true);
-    const { error: err } = await signIn(email, password);
+    const { error: err } = await signIn(email, password, rememberMe);
     setLoading(false);
     if (err) { setError(err); return; }
     router.push("/vendor-dashboard");
   };
 
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault(); reset(); setLoading(true);
+  const handleSendOTP = async (e?: React.FormEvent) => {
+    e?.preventDefault(); reset(); setLoading(true);
     const { error: err } = await sendOTP(otpEmail);
     setLoading(false);
     if (err) { setError(err); return; }
@@ -82,13 +83,21 @@ export default function VendorLoginPage() {
     setOtpStep("verify");
   };
 
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault(); reset(); setLoading(true);
-    const { error: err } = await verifyOTP(otpEmail, otp);
+  const handleVerifyOTP = useCallback(async () => {
+    if (loading) return;
+    reset(); setLoading(true);
+    const { error: err } = await verifyOTP(otpEmail, otp, rememberMe);
     setLoading(false);
     if (err) { setError(err); return; }
     router.push("/vendor-dashboard");
-  };
+  }, [loading, otpEmail, otp, rememberMe, verifyOTP, router]);
+
+  // Auto-submit OTP when all 6 digits are entered
+  useEffect(() => {
+    if (otp.length === 6 && otpStep === "verify" && !loading) {
+      handleVerifyOTP();
+    }
+  }, [otp, otpStep, loading, handleVerifyOTP]);
 
   const handleGoogleLogin = async () => { reset(); await signInWithGoogle(); };
 
@@ -119,7 +128,6 @@ export default function VendorLoginPage() {
       <div className="relative hidden flex-col justify-between overflow-hidden p-14 lg:flex"
         style={{ background: "var(--bg2)", borderRight: "1px solid var(--border3)" }}>
 
-        {/* Background texture */}
         <div className="pointer-events-none absolute inset-0" style={{
           backgroundImage: "repeating-linear-gradient(135deg, rgba(201,168,76,0.025) 0px, rgba(201,168,76,0.025) 1px, transparent 1px, transparent 12px)",
         }} />
@@ -127,7 +135,6 @@ export default function VendorLoginPage() {
           background: "radial-gradient(ellipse at 20% 100%, rgba(201,168,76,0.12) 0%, transparent 65%)",
         }} />
 
-        {/* Logo */}
         <Link href="/" className="relative z-10 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black" style={{ background: "var(--gold)", color: "var(--bg)" }}>HM</div>
           <div>
@@ -136,7 +143,6 @@ export default function VendorLoginPage() {
           </div>
         </Link>
 
-        {/* Hero copy */}
         <div className="relative z-10">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]"
             style={{ border: "1px solid rgba(201,168,76,0.3)", background: "rgba(201,168,76,0.07)", color: "var(--gold)" }}>
@@ -151,7 +157,6 @@ export default function VendorLoginPage() {
             Join 4,800+ verified vendors managing their entire event business — from discovery to deal — on one intelligent platform.
           </p>
 
-          {/* Feature list */}
           <div className="mt-10 space-y-4">
             {VENDOR_FEATURES.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-start gap-4">
@@ -166,7 +171,6 @@ export default function VendorLoginPage() {
             ))}
           </div>
 
-          {/* Testimonial */}
           <div className="mt-10 rounded-2xl p-5" style={{ border: "1px solid var(--border3)", background: "rgba(201,168,76,0.04)" }}>
             <div className="mb-3 flex gap-0.5">
               {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={11} className="fill-[#c9a84c] text-[#c9a84c]" />)}
@@ -193,7 +197,6 @@ export default function VendorLoginPage() {
       <div className="flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[400px]">
 
-          {/* Mobile logo */}
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black" style={{ background: "var(--gold)", color: "var(--bg)" }}>HM</div>
             <span className="text-xs font-black uppercase tracking-wider" style={{ color: "var(--text)" }}>Happy Moments · Vendors</span>
@@ -252,7 +255,7 @@ export default function VendorLoginPage() {
             </form>
           )}
 
-          {/* Main login form (shown when not in forgot flow or "sent") */}
+          {/* Main login form */}
           {forgotStage === "idle" && (
             <>
               {/* Google Sign-in */}
@@ -316,6 +319,14 @@ export default function VendorLoginPage() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Remember me */}
+                  <label className="flex cursor-pointer items-center gap-2.5">
+                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer rounded accent-[#c9a84c]" />
+                    <span className="text-xs" style={{ color: "var(--text3)" }}>Remember me</span>
+                  </label>
+
                   <button type="submit" disabled={loading}
                     className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-50"
                     style={{ background: "var(--gold)", color: "#000", boxShadow: "0 8px 24px rgba(201,168,76,0.2)" }}>
@@ -324,7 +335,7 @@ export default function VendorLoginPage() {
                 </form>
               )}
 
-              {/* OTP form */}
+              {/* OTP: Email step */}
               {mode === "otp" && otpStep === "email" && (
                 <form onSubmit={handleSendOTP} className="space-y-4">
                   <div>
@@ -340,8 +351,9 @@ export default function VendorLoginPage() {
                 </form>
               )}
 
+              {/* OTP: Verify step */}
               {mode === "otp" && otpStep === "verify" && (
-                <form onSubmit={handleVerifyOTP} className="space-y-4">
+                <div className="space-y-4">
                   <div>
                     <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--text3)" }}>One-Time Code</label>
                     <input
@@ -349,30 +361,35 @@ export default function VendorLoginPage() {
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       placeholder="••••••"
-                      required
                       maxLength={6}
                       inputMode="numeric"
+                      autoFocus
                       className="w-full rounded-xl px-4 py-3 text-center text-2xl font-bold tracking-[0.5em] focus:outline-none"
                       style={{ border: "1px solid var(--border3)", background: "var(--bg)", color: "var(--text)" }}
                     />
                     <div className="mt-1.5 flex items-center justify-between">
-                      <p className="text-[10px]" style={{ color: "var(--text4)" }}>Sent to {otpEmail}</p>
+                      <p className="text-[10px]" style={{ color: "var(--text4)" }}>
+                        {loading ? "Verifying…" : `Sent to ${otpEmail}`}
+                      </p>
                       <button type="button" onClick={() => { setOtpStep("email"); setOtp(""); reset(); }}
                         className="text-[10px] font-semibold transition hover:opacity-70" style={{ color: "var(--gold)" }}>
                         Change email
                       </button>
                     </div>
                   </div>
-                  <button type="submit" disabled={loading || otp.length < 6}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:opacity-50"
-                    style={{ background: "var(--gold)", color: "#000", boxShadow: "0 8px 24px rgba(201,168,76,0.2)" }}>
-                    {loading ? <Loader2 size={16} className="animate-spin" /> : "Verify & Sign In"}
-                  </button>
-                  <button type="button" onClick={handleSendOTP} disabled={loading}
+
+                  {/* Remember me for OTP too */}
+                  <label className="flex cursor-pointer items-center gap-2.5">
+                    <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 cursor-pointer rounded accent-[#c9a84c]" />
+                    <span className="text-xs" style={{ color: "var(--text3)" }}>Remember me</span>
+                  </label>
+
+                  <button type="button" onClick={() => handleSendOTP()} disabled={loading}
                     className="w-full text-center text-xs transition hover:opacity-70 disabled:opacity-40" style={{ color: "var(--text4)" }}>
                     Didn&apos;t receive it? <span style={{ color: "var(--gold)" }}>Resend</span>
                   </button>
-                </form>
+                </div>
               )}
 
               <div className="mt-6 border-t pt-5 text-center text-xs" style={{ borderColor: "var(--border3)", color: "var(--text4)" }}>

@@ -1,111 +1,227 @@
 "use client";
 
 import { Vendor } from "@/lib/supabase";
-import { Star, Heart, BadgeCheck } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { Star, Heart, BadgeCheck, MapPin, ArrowRight, Camera, Building2, UtensilsCrossed, Palette, Smile, ClipboardList, Music2, Video } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { getVendorCatalogImages } from "@/services/vendors";
+import Link from "next/link";
 
 interface VendorCardProps {
     vendor: Vendor;
+    index?: number;
 }
 
-export default function VendorCard({ vendor }: VendorCardProps) {
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+    photography:    Camera,
+    venues:         Building2,
+    catering:       UtensilsCrossed,
+    decorators:     Palette,
+    makeup:         Smile,
+    "event planners": ClipboardList,
+    entertainment:  Music2,
+    videography:    Video,
+};
+
+export default function VendorCard({ vendor, index = 0 }: VendorCardProps) {
     const [isFavorite, setIsFavorite] = useState(false);
-    const [coverImg, setCoverImg] = useState<string | null>(
+    const [hovered, setHovered]       = useState(false);
+    const [coverImg, setCoverImg]     = useState<string | null>(
         vendor.cover_image_url || vendor.avatar_url || null
     );
 
     useEffect(() => {
         if (coverImg) return;
-        // No direct URL stored — fetch first catalog image as cover
         getVendorCatalogImages(vendor.vendor_id).then((imgs) => {
             if (imgs.length > 0) setCoverImg(imgs[0]);
         });
     }, [vendor.vendor_id, coverImg]);
 
-    const img = coverImg;
     const category = vendor.categories?.[0] || (vendor.category as string) || "";
-    const city = vendor.address?.split(",").pop()?.trim() || "";
+    const city     = vendor.address?.split(",").pop()?.trim() || "";
+    const CatIcon  = CATEGORY_ICONS[category.toLowerCase()] ?? Camera;
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.3 }}
-            className="group cursor-pointer flex flex-col gap-3"
+            transition={{ duration: 0.4, delay: index * 0.04, ease: "easeOut" }}
+            onHoverStart={() => setHovered(true)}
+            onHoverEnd={() => setHovered(false)}
+            className="group relative overflow-hidden rounded-2xl flex flex-col cursor-pointer"
+            style={{
+                background: "var(--bg2)",
+                border: "1px solid var(--border2)",
+                boxShadow: hovered ? "0 20px 60px rgba(0,0,0,0.35)" : "0 2px 12px rgba(0,0,0,0.12)",
+                transform: hovered ? "translateY(-6px)" : "translateY(0)",
+                transition: "box-shadow 0.35s ease, transform 0.35s ease",
+            }}
         >
-            {/* Image Container */}
-            <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-100">
-                {img ? (
+            {/* Image */}
+            <div className="relative overflow-hidden" style={{ aspectRatio: "4/3" }}>
+                {coverImg ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                        src={img}
+                        src={coverImg}
                         alt={vendor.brand_name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="h-full w-full object-cover"
+                        style={{
+                            transform: hovered ? "scale(1.07)" : "scale(1)",
+                            transition: "transform 0.5s ease",
+                        }}
                     />
                 ) : (
-                    <div className="flex h-full items-center justify-center text-3xl font-bold text-gray-300">
+                    <div
+                        className="flex h-full w-full items-center justify-center text-5xl font-bold"
+                        style={{
+                            background: "linear-gradient(135deg, var(--bg3) 0%, var(--border2) 100%)",
+                            color: "var(--text4)",
+                        }}
+                    >
                         {vendor.brand_name[0]}
                     </div>
                 )}
 
-                {/* Favorite Button */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsFavorite(!isFavorite);
+                {/* Gradient overlay */}
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                        background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 100%)",
                     }}
-                    className="absolute top-3 right-3 p-2 rounded-full transition-all hover:scale-110 glass"
-                >
-                    <Heart
-                        size={20}
-                        className={isFavorite ? "fill-brand-primary text-brand-primary" : "text-white"}
-                    />
-                </button>
+                />
 
-                {/* Category Badge */}
+                {/* Category badge */}
                 {category && (
-                    <div className="absolute top-3 left-3 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider glass text-white">
-                        {category}
+                    <div
+                        className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full px-3 py-1.5 backdrop-blur-md"
+                        style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+                    >
+                        <CatIcon size={11} style={{ color: "var(--gold)" }} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-white">{category}</span>
                     </div>
                 )}
-            </div>
 
-            {/* Info Section */}
-            <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold truncate flex items-center gap-1">
-                        {vendor.brand_name}
-                        {vendor.verified && (
-                            <BadgeCheck size={16} className="text-brand-accent fill-brand-accent/10" />
-                        )}
-                    </h3>
-                    {vendor.rating && (
-                        <div className="flex items-center gap-1 text-sm">
-                            <Star size={14} className="fill-current text-brand-secondary" />
-                            <span>{vendor.rating.toFixed(1)}</span>
-                        </div>
-                    )}
-                </div>
+                {/* Heart button */}
+                <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={(e) => { e.stopPropagation(); setIsFavorite(!isFavorite); }}
+                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-md"
+                    style={{
+                        background: isFavorite ? "rgba(239,68,68,0.85)" : "rgba(0,0,0,0.55)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                    }}
+                >
+                    <Heart
+                        size={15}
+                        style={{
+                            color: isFavorite ? "#fff" : "rgba(255,255,255,0.8)",
+                            fill: isFavorite ? "#fff" : "none",
+                            transition: "all 0.2s",
+                        }}
+                    />
+                </motion.button>
 
-                {city && (
-                    <p className="text-sm text-brand-muted truncate">{city}</p>
+                {/* Verified */}
+                {vendor.verified && (
+                    <div
+                        className="absolute left-3 bottom-[68px] flex items-center gap-1 rounded-full px-2.5 py-1"
+                        style={{ background: "var(--gold)", color: "#000" }}
+                    >
+                        <BadgeCheck size={10} />
+                        <span className="text-[9px] font-bold uppercase tracking-wider">Verified</span>
+                    </div>
                 )}
 
-                <div className="mt-1 flex items-baseline gap-1">
-                    {vendor.starting_price ? (
-                        <>
-                            <span className="font-bold text-lg text-brand-secondary">
-                                {formatPrice(vendor.starting_price)}
-                            </span>
-                            <span className="text-sm text-brand-muted">starting</span>
-                        </>
-                    ) : (
-                        <span className="text-sm text-brand-muted">Contact for pricing</span>
+                {/* Rating row */}
+                <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 flex items-end justify-between">
+                    <div className="flex items-center gap-1.5">
+                        {[...Array(5)].map((_, i) => (
+                            <Star
+                                key={i}
+                                size={11}
+                                style={{
+                                    fill: i < Math.round(vendor.rating ?? 0) ? "#c9a84c" : "transparent",
+                                    color: i < Math.round(vendor.rating ?? 0) ? "#c9a84c" : "rgba(255,255,255,0.3)",
+                                }}
+                            />
+                        ))}
+                        <span className="ml-1 text-xs font-semibold text-white">{vendor.rating?.toFixed(1) ?? "New"}</span>
+                        {vendor.review_count ? (
+                            <span className="text-[10px] text-white/50">({vendor.review_count})</span>
+                        ) : null}
+                    </div>
+                </div>
+
+                {/* Hover CTA */}
+                <AnimatePresence>
+                    {hovered && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 12 }}
+                            transition={{ duration: 0.22 }}
+                            className="absolute inset-0 flex items-center justify-center"
+                            style={{ background: "rgba(0,0,0,0.28)" }}
+                        >
+                            <Link
+                                href={`/vendor/${vendor.slug || vendor.vendor_id}`}
+                                className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold backdrop-blur-sm"
+                                style={{ background: "var(--gold)", color: "#000" }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                View Profile <ArrowRight size={14} />
+                            </Link>
+                        </motion.div>
                     )}
+                </AnimatePresence>
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-col flex-1 p-4 gap-2">
+                <h3 className="text-sm font-semibold leading-snug line-clamp-1" style={{ color: "var(--text)" }}>
+                    {vendor.brand_name}
+                </h3>
+
+                {city && (
+                    <p className="flex items-center gap-1.5 text-xs" style={{ color: "var(--text3)" }}>
+                        <MapPin size={11} style={{ color: "var(--gold)", flexShrink: 0 }} />
+                        {city}
+                    </p>
+                )}
+
+                {vendor.caption && (
+                    <p className="text-xs leading-relaxed line-clamp-2 flex-1" style={{ color: "var(--text3)" }}>
+                        {vendor.caption}
+                    </p>
+                )}
+
+                <div
+                    className="flex items-center justify-between pt-3 mt-auto"
+                    style={{ borderTop: "1px solid var(--border3)" }}
+                >
+                    {vendor.starting_price ? (
+                        <div>
+                            <span className="text-base font-bold" style={{ color: "var(--text)" }}>
+                                ₹{vendor.starting_price.toLocaleString("en-IN")}
+                            </span>
+                            <span className="ml-1 text-[11px]" style={{ color: "var(--text4)" }}>onwards</span>
+                        </div>
+                    ) : (
+                        <span className="text-xs italic" style={{ color: "var(--text4)" }}>Price on request</span>
+                    )}
+
+                    <Link
+                        href={`/vendor/${vendor.slug || vendor.vendor_id}`}
+                        className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+                        style={{
+                            background: "rgba(201,168,76,0.12)",
+                            color: "var(--gold)",
+                            border: "1px solid rgba(201,168,76,0.25)",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        View <ArrowRight size={11} />
+                    </Link>
                 </div>
             </div>
         </motion.div>

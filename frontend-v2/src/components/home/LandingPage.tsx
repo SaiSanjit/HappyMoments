@@ -11,6 +11,11 @@ import {
   IconPhotography, IconVenues, IconCatering, IconDecoration,
   IconEntertainment, IconMakeup, IconPlanning, IconVideography,
 } from "./AnimatedCategoryIcons";
+import {
+  IconMusic, IconNightlife, IconComedy, IconPerformances,
+  IconFoodDrinks, IconFestsFairs, IconSocialMixers, IconScreenings,
+  IconFitness, IconArtExhibitions, IconConferences, IconOpenMics,
+} from "./EventCategoryIcons";
 import { FEATURED_VENDORS, TRUST_MARKS } from "@/lib/homepage-data";
 
 const CATEGORIES = [
@@ -22,6 +27,21 @@ const CATEGORIES = [
   { name: "Makeup",        AnimIcon: IconMakeup,        count: "285+",  href: "/discover?category=Makeup" },
   { name: "Planning",      AnimIcon: IconPlanning,      count: "190+",  href: "/discover?category=Event+Planners" },
   { name: "Videography",   AnimIcon: IconVideography,   count: "320+",  href: "/discover?category=Videography" },
+];
+
+const EVENT_CATEGORIES = [
+  { name: "Music",           AnimIcon: IconMusic,          href: "/discover?type=Music" },
+  { name: "Nightlife",       AnimIcon: IconNightlife,       href: "/discover?type=Nightlife" },
+  { name: "Comedy",          AnimIcon: IconComedy,          href: "/discover?type=Comedy" },
+  { name: "Performances",    AnimIcon: IconPerformances,    href: "/discover?type=Performances" },
+  { name: "Food & Drinks",   AnimIcon: IconFoodDrinks,      href: "/discover?type=Food" },
+  { name: "Fests & Fairs",   AnimIcon: IconFestsFairs,      href: "/discover?type=Fests" },
+  { name: "Social Mixers",   AnimIcon: IconSocialMixers,    href: "/discover?type=Social" },
+  { name: "Screenings",      AnimIcon: IconScreenings,      href: "/discover?type=Screenings" },
+  { name: "Fitness",         AnimIcon: IconFitness,         href: "/discover?type=Fitness" },
+  { name: "Art Exhibitions", AnimIcon: IconArtExhibitions,  href: "/discover?type=Art" },
+  { name: "Conferences",     AnimIcon: IconConferences,     href: "/discover?type=Conferences" },
+  { name: "Open Mics",       AnimIcon: IconOpenMics,        href: "/discover?type=OpenMics" },
 ];
 
 const HOW_IT_WORKS = [
@@ -275,6 +295,48 @@ export default function LandingPage() {
                     <p style={{ color: "var(--text3)", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 400 }}>{count} vendors</p>
                     <span style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.04em" }}>Explore →</span>
                   </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Explore Events ── */}
+      <section className="px-4 py-24 transition-colors duration-300 md:px-8" style={{ background: "var(--bg4)" }}>
+        <div className="mx-auto max-w-7xl">
+          <div className="reveal mb-12 text-center">
+            <p style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", marginBottom: "12px" }}>Explore Events</p>
+            <h2 className="font-display text-4xl md:text-5xl" style={{ color: "var(--text)" }}>
+              Find your next{" "}
+              <em className="italic" style={{ color: "var(--gold)" }}>unforgettable night.</em>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {EVENT_CATEGORIES.map(({ name, AnimIcon, href }, i) => (
+              <Link
+                key={name}
+                href={href}
+                className="reveal group relative overflow-hidden rounded-2xl transition duration-300 hover:-translate-y-1.5"
+                style={{
+                  background: "var(--bg2)",
+                  border: "1px solid var(--border2)",
+                  transitionDelay: `${i * 40}ms`,
+                  boxShadow: "var(--card-shadow)",
+                }}
+              >
+                <div className="relative h-40 w-full overflow-hidden">
+                  <AnimIcon />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12"
+                    style={{ background: "linear-gradient(to bottom, transparent, var(--bg2))" }}
+                  />
+                  <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{ background: "radial-gradient(ellipse at 50% 100%, rgba(201,168,76,0.10), transparent 70%)" }}
+                  />
+                </div>
+                <div className="px-4 pb-4 pt-1">
+                  <p style={{ color: "var(--text)", fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 600, letterSpacing: "-0.01em" }}>{name}</p>
+                  <span style={{ color: "var(--gold)", fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.04em" }}>Explore →</span>
                 </div>
               </Link>
             ))}

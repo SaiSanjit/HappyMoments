@@ -4,13 +4,20 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { ResourceSession, CRMUserGroup } from "@/lib/crm-types";
 
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+const SESSION_KEY = "resource_session";
+const REMEMBER_KEY = "resource_remember";
+
 interface ResourceAuthContextType {
   resource: ResourceSession | null;
   loading: boolean;
   isAdmin: boolean;
   hasGroup: (group: CRMUserGroup) => boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: string | null }>;
   signOut: () => void;
+  sendResetOtp: (email: string) => Promise<{ error: string | null }>;
+  verifyResetOtp: (email: string, otp: string) => Promise<{ error: string | null }>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ error: string | null }>;
 }
 
 const ResourceAuthContext = createContext<ResourceAuthContextType | undefined>(undefined);
@@ -35,15 +42,16 @@ export function ResourceAuthProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("resource_session");
+      const raw = localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY);
       if (raw) setResource(JSON.parse(raw) as ResourceSession);
     } catch {
-      localStorage.removeItem("resource_session");
+      localStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
     }
     setLoading(false);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     const hash = await hashPassword(password);
 
     const { data, error } = await supabase
@@ -61,7 +69,9 @@ export function ResourceAuthProvider({ children }: { children: React.ReactNode }
       user_groups: (row.user_groups || []) as CRMUserGroup[],
     };
 
-    localStorage.setItem("resource_session", JSON.stringify(session));
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (rememberMe) localStorage.setItem(REMEMBER_KEY, "1");
     setResource(session);
 
     await supabase
@@ -73,8 +83,43 @@ export function ResourceAuthProvider({ children }: { children: React.ReactNode }
   };
 
   const signOut = () => {
-    localStorage.removeItem("resource_session");
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
     setResource(null);
+  };
+
+  const sendResetOtp = async (email: string) => {
+    const res = await fetch(`${API}/api/email/send-resource-reset-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.toLowerCase().trim() }),
+    });
+    const data = await res.json();
+    if (!data.success) return { error: data.message || "Failed to send reset code" };
+    return { error: null };
+  };
+
+  const verifyResetOtp = async (email: string, otp: string) => {
+    const res = await fetch(`${API}/api/email/verify-resource-reset-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.toLowerCase().trim(), otp }),
+    });
+    const data = await res.json();
+    if (!data.success) return { error: data.message || "Invalid code" };
+    return { error: null };
+  };
+
+  const resetPassword = async (email: string, otp: string, newPassword: string) => {
+    const res = await fetch(`${API}/api/resources/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.toLowerCase().trim(), otp, newPassword }),
+    });
+    const data = await res.json();
+    if (!data.success) return { error: data.message || "Failed to reset password" };
+    return { error: null };
   };
 
   const isAdmin = resource?.crm_admin === 'Y';
@@ -83,7 +128,7 @@ export function ResourceAuthProvider({ children }: { children: React.ReactNode }
     isAdmin || (resource?.user_groups || []).includes(group);
 
   return (
-    <ResourceAuthContext.Provider value={{ resource, loading, isAdmin, hasGroup, signIn, signOut }}>
+    <ResourceAuthContext.Provider value={{ resource, loading, isAdmin, hasGroup, signIn, signOut, sendResetOtp, verifyResetOtp, resetPassword }}>
       {children}
     </ResourceAuthContext.Provider>
   );

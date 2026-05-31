@@ -20,13 +20,15 @@ export function clearAdminSession() {
   localStorage.removeItem(ADMIN_SESSION_KEY);
 }
 
+const SESSION_8H = 8 * 60 * 60 * 1000;
+const SESSION_7D = 7 * 24 * 60 * 60 * 1000;
+
 export function isAdminLoggedIn(): boolean {
   try {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
     if (!raw) return false;
-    const { loggedIn, at } = JSON.parse(raw);
-    // Session valid for 8 hours
-    return loggedIn === true && Date.now() - at < 8 * 60 * 60 * 1000;
+    const { loggedIn, at, ttl } = JSON.parse(raw);
+    return loggedIn === true && Date.now() - at < (ttl ?? SESSION_8H);
   } catch {
     return false;
   }
@@ -37,12 +39,14 @@ export default function AdminLoginPage() {
   const [stage, setStage] = useState<Stage>("login");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === ADMIN_PASSWORD) {
-      setAdminSession();
+      const ttl = rememberMe ? SESSION_7D : SESSION_8H;
+      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({ loggedIn: true, at: Date.now(), ttl }));
       router.push("/admin");
     } else {
       setError("Incorrect password. Please try again.");
@@ -93,6 +97,13 @@ export default function AdminLoginPage() {
                     </button>
                   </div>
                 </div>
+                {/* Remember me */}
+                <label className="flex cursor-pointer items-center gap-2.5">
+                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)}
+                    className="h-4 w-4 cursor-pointer rounded accent-[#c9a84c]" />
+                  <span className="text-xs" style={{ color: "var(--text4)" }}>Stay signed in for 7 days</span>
+                </label>
+
                 <button type="submit"
                   className="w-full rounded-xl py-3.5 text-sm font-bold transition hover:opacity-90"
                   style={{ background: "var(--gold)", color: "#000" }}>
