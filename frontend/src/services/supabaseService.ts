@@ -880,20 +880,31 @@ export const getCustomerReviews = async (vendorId: string): Promise<any[]> => {
     }
 
     // Transform the data to match the expected format
-    const transformedReviews = (reviews || []).map(review => ({
-      id: review.id,
-      customer_id: review.customer_id,
-      customer_name: review.customer_name,
-      rating: review.rating,
-      review: review.review_text,
-      date: new Date(review.created_at).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      verified: review.is_verified,
-      created_at: review.created_at
-    }));
+    const transformedReviews = (reviews || []).map(review => {
+      // Safely parse dummy UUID customer_id back to a number
+      let parsedCustomerId = null;
+      if (review.customer_id) {
+        const parts = review.customer_id.split('-');
+        const lastPart = parts[parts.length - 1];
+        const parsed = parseInt(lastPart, 10);
+        parsedCustomerId = isNaN(parsed) ? null : parsed;
+      }
+
+      return {
+        id: review.id,
+        customer_id: parsedCustomerId,
+        customer_name: review.customer_name,
+        rating: review.rating,
+        review: review.review_text,
+        date: new Date(review.created_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        verified: review.is_verified,
+        created_at: review.created_at
+      };
+    });
 
     console.log(`Found ${transformedReviews.length} reviews for vendor ${vendorId}`);
     return transformedReviews;
@@ -3023,19 +3034,20 @@ export const getAllReviews = async (): Promise<{ success: boolean; data?: Review
 // Add a new review for a vendor (customer reviews)
 export const addReview = async (
   vendorId: string | number,
-  customerId: number,
+  customerId: number | null,
   customerName: string,
   reviewText: string,
-  rating: number = 5
+  rating: number = 5,
+  isAdmin: boolean = false
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
   try {
-    console.log(`Adding review for vendor ${vendorId} by customer ${customerId}`);
+    console.log(`Adding review for vendor ${vendorId} by ${isAdmin ? 'Admin' : 'Customer ' + customerId}`);
 
     // Validate required fields
     if (!vendorId) {
       return { success: false, error: 'Vendor ID is required' };
     }
-    if (!customerId) {
+    if (!isAdmin && !customerId) {
       return { success: false, error: 'Customer must be logged in to add a review' };
     }
     if (!customerName || !customerName.trim()) {
@@ -3048,17 +3060,30 @@ export const addReview = async (
       return { success: false, error: 'Rating must be between 1 and 5' };
     }
 
+    // Convert integer customerId or null admin to valid Postgres UUID format
+    let customerUuid = '00000000-0000-0000-0000-000000000000';
+    if (isAdmin) {
+      // Generate a unique random UUID for each admin review to prevent duplicate constraint (customer_id, vendor_id) violations
+      customerUuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    } else if (customerId) {
+      customerUuid = '00000000-0000-0000-0000-' + customerId.toString().padStart(12, '0');
+    }
+
     const { data, error } = await supabase
       .from('customer_reviews')
       .insert([
         {
           vendor_id: vendorId.toString(),
-          customer_id: customerId,
+          customer_id: customerUuid,
           customer_name: customerName.trim(),
           review_text: reviewText.trim(),
           rating: rating,
           is_published: true,
-          is_verified: true, // Auto-verify reviews from logged-in customers
+          is_verified: true, // Auto-verify reviews from logged-in customers/admins
           created_at: new Date().toISOString()
         }
       ])

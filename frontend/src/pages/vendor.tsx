@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Vendor } from '@/lib/supabase';
-import { getVendorByFieldId, getVendorMedia, getHighlightedCatalogImages, getAllCatalogImages } from '../services/supabaseService';
+import { getVendorByFieldId, getVendorMedia, getHighlightedCatalogImages, getAllCatalogImages, getCustomerReviews } from '../services/supabaseService';
 import { getVendorBrandLogoFromStorage, getVendorContactPersonImageFromStorage } from '../services/supabaseStorageService';
 import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Info, Globe, Scroll, FileText, Menu, X, ChevronLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -19,6 +19,7 @@ import VendorActionButtons from '@/components/VendorActionButtons';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
 import { checkVendorContacted } from '@/services/contactedVendorsApiService';
 import { getLoggedInVendor } from '@/services/supabaseService';
+import AddReviewModal from '../components/AddReviewModal';
 
 const VendorProfile = () => {
   const { vendorId } = useParams<{ vendorId: string }>();
@@ -49,6 +50,9 @@ const VendorProfile = () => {
   const [highlightImages, setHighlightImages] = useState<any[]>([]);
   const [catalogImages, setCatalogImages] = useState<any[]>([]);
   const [highlightedCatalogImages, setHighlightedCatalogImages] = useState<any[]>([]);
+  const [customerReviews, setCustomerReviews] = useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const isAdmin = localStorage.getItem("adminLoggedIn") === "true";
   const [selectedImage, setSelectedImage] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -66,6 +70,17 @@ const VendorProfile = () => {
   const [contactPersonImageUrl, setContactPersonImageUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
 
+  const rating = useMemo(() => {
+    if (customerReviews.length === 0) return vendor?.rating || 4.5;
+    const validReviews = customerReviews.filter(r => r.rating);
+    if (validReviews.length === 0) return vendor?.rating || 4.5;
+    return (validReviews.reduce((sum, r) => sum + r.rating, 0) / validReviews.length).toFixed(1);
+  }, [customerReviews, vendor]);
+
+  const reviewCount = useMemo(() => {
+    return customerReviews.length;
+  }, [customerReviews]);
+
   // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -79,6 +94,25 @@ const VendorProfile = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [mobileMenuOpen]);
+
+  // Function to refresh reviews and vendor data after review submission
+  const refreshVendorData = async () => {
+    if (!vendorId) return;
+    try {
+      const reviews = await getCustomerReviews(vendorId);
+      setCustomerReviews(reviews);
+    } catch (error) {
+      console.error('Error refreshing reviews:', error);
+    }
+  };
+
+  const handleAddReviewClick = () => {
+    if (!customer && !isAdmin) {
+      navigate(`/customer-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+    } else {
+      setShowReviewModal(true);
+    }
+  };
 
   // Check contact status - memoized to prevent unnecessary re-renders
   const checkContactStatus = useCallback(async () => {
@@ -135,14 +169,16 @@ const VendorProfile = () => {
           highlightedCatalog,
           allCatalogImages,
           brandLogo,
-          contactPersonImage
+          contactPersonImage,
+          reviewsData
         ] = await Promise.all([
           getVendorByFieldId(vendorIdStr),
           getVendorMedia(vendorIdStr),
           getHighlightedCatalogImages(vendorIdStr),
           getAllCatalogImages(vendorIdStr),
           getVendorBrandLogoFromStorage(vendorIdStr),
-          getVendorContactPersonImageFromStorage(vendorIdStr)
+          getVendorContactPersonImageFromStorage(vendorIdStr),
+          getCustomerReviews(vendorIdStr)
         ]);
 
         console.log('Fetched vendor data:', vendorData);
@@ -167,6 +203,7 @@ const VendorProfile = () => {
         setHighlightImages(highlights);
         setHighlightedCatalogImages(highlightedCatalog);
         setCatalogImages(allCatalogImages);
+        setCustomerReviews(reviewsData);
         // Reset logo error state when new logo is loaded
         setLogoError(false);
         setBrandLogoUrl(brandLogo);
@@ -297,7 +334,7 @@ const VendorProfile = () => {
     return <Navigate to="/" />;
   }
 
-  const rating = vendor.rating || 4.5;
+
   
   // Debug services data
   console.log('=== VENDOR SERVICES DEBUG ===');
@@ -825,39 +862,49 @@ const VendorProfile = () => {
                   ))}
                 </div>
               )}
-
-              {/* Reviews Section with Special Handling for 0 Reviews */}
+                      {/* Reviews Section with Special Handling for 0 Reviews */}
               <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-green-100">
                 <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                     <h2 className="text-xl font-bold flex items-center gap-2">
                       <Users className="w-5 h-5 text-green-600" />
                       Customer Reviews
                     </h2>
-                    {vendor.review_count && vendor.review_count > 0 && (
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">{rating}★</div>
-                        <div className="text-xs text-gray-600">from {vendor.review_count} customers</div>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {reviewCount > 0 && (
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-green-600">{rating}★</div>
+                          <div className="text-xs text-gray-600">from {reviewCount} customer{reviewCount !== 1 ? 's' : ''}</div>
+                        </div>
+                      )}
+                      <Button
+                        onClick={handleAddReviewClick}
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        Add a Review
+                      </Button>
+                    </div>
                   </div>
                   
-                  {vendor.customer_reviews && vendor.customer_reviews.length > 0 ? (
+                  {customerReviews && customerReviews.length > 0 ? (
                     <div className="space-y-4">
-                      {vendor.customer_reviews.slice(0, 3).map((review: any, index: number) => (
+                      {customerReviews.map((review: any, index: number) => (
                         <div key={index} className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">
-                                  {review.customer_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                                  {review.customer_name ? review.customer_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
                                 </span>
                               </div>
                               <div>
                                 <h4 className="font-bold text-gray-800 text-sm">{review.customer_name || 'Customer'}</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className="text-xs font-bold text-amber-600">{review.rating}/5</span>
-                                  <span className="text-xs text-gray-500">{review.date || ''}</span>
+                                  <span className="text-xs text-gray-505 text-gray-500">{review.date || ''}</span>
+                                  {review.verified && (
+                                    <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0.2">✓ Verified</Badge>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -867,10 +914,8 @@ const VendorProfile = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-6">
-                      <div className="text-4xl mb-2">✨</div>
-                      <p className="text-sm font-semibold text-gray-700 mb-1">New on platform</p>
-                      <p className="text-xs text-gray-600">{vendor.experience || "10+ years"} offline experience</p>
+                    <div className="text-center py-6 text-gray-500">
+                      <p className="text-sm">No reviews yet. Be the first to share your experience!</p>
                     </div>
                   )}
                 </CardContent>
@@ -1735,6 +1780,67 @@ const VendorProfile = () => {
               </CardContent>
             </Card>
 
+            {/* Reviews Section - Desktop View */}
+            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-green-100">
+              <CardContent className="p-8">
+                <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
+                  <h2 className="text-3xl font-bold flex items-center gap-3">
+                    <Users className="w-8 h-8 text-green-600" />
+                    Customer Reviews
+                  </h2>
+                  <div className="flex items-center gap-4">
+                    {reviewCount > 0 && (
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-green-600">{rating}★</div>
+                        <div className="text-sm text-gray-600">from {reviewCount} customer{reviewCount !== 1 ? 's' : ''}</div>
+                      </div>
+                    )}
+                    <Button
+                      onClick={handleAddReviewClick}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      Add a Review
+                    </Button>
+                  </div>
+                </div>
+
+                {customerReviews && customerReviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {customerReviews.map((review: any, index: number) => (
+                      <div key={index} className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 hover:shadow-md transition-all duration-300">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+                              <span className="text-white font-bold text-lg">
+                                {review.customer_name ? review.customer_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
+                              </span>
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-lg text-gray-800">{review.customer_name || 'Customer'}</h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-sm font-bold text-amber-600">{review.rating}/5</span>
+                                <span className="text-sm text-gray-500">{review.date || ''}</span>
+                                {review.verified && (
+                                  <Badge className="bg-green-600 text-white px-2 py-0.5 text-xs">✓ Verified</Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-gray-700 leading-relaxed text-lg">{review.review}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="text-5xl mb-4">📝</div>
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No reviews yet</h3>
+                    <p className="text-sm">Be the first to share your experience!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Additional Information Section - Desktop Left Column */}
             {vendor.additional_info && (
               <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-purple-100">
@@ -2233,6 +2339,16 @@ const VendorProfile = () => {
             Chat Now
           </WhatsAppButton>
         </div>
+      )}
+
+      {/* Add Review Modal */}
+      {(customer || isAdmin) && vendorId && (
+        <AddReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          vendorId={vendorId}
+          onReviewSubmitted={refreshVendorData}
+        />
       )}
 
     </div>

@@ -696,13 +696,6 @@ const Header = () => {
                   </Button>
                 </form>
 
-                <div className="text-center">
-                  <p className="text-xs text-blue-800 font-medium mb-1">Demo Credentials:</p>
-                  <div className="text-xs text-blue-700">
-                    <div><strong>User:</strong> HMP002</div>
-                    <div><strong>Pass:</strong> HMP002@777</div>
-                  </div>
-                </div>
               </div>
             )}
           </div>

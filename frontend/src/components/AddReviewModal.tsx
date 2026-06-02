@@ -20,20 +20,27 @@ const AddReviewModal: React.FC<AddReviewModalProps> = ({
   onReviewSubmitted,
   vendorId
 }) => {
-  const { customer, isAuthenticated } = useCustomerAuth();
+  const { customer } = useCustomerAuth();
+  const isAuthenticated = !!customer;
+  const isAdmin = localStorage.getItem("adminLoggedIn") === "true";
   const [reviewText, setReviewText] = useState('');
+  const [adminReviewerName, setAdminReviewerName] = useState('');
   const [rating, setRating] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    // Check if customer is logged in
-    if (!isAuthenticated || !customer) {
-      setError('You must be logged in as a customer to add a review');
+    // Check if customer or admin is logged in
+    if (!isAdmin && (!isAuthenticated || !customer)) {
+      setError('You must be logged in to add a review');
       return;
     }
 
     // Validate required fields
+    if (isAdmin && !adminReviewerName.trim()) {
+      setError('Please enter a reviewer name');
+      return;
+    }
     if (!reviewText.trim()) {
       setError('Please enter your review');
       return;
@@ -47,19 +54,25 @@ const AddReviewModal: React.FC<AddReviewModalProps> = ({
     setError('');
 
     try {
-      const customerName = customer.full_name || customer.email?.split('@')[0] || 'Customer';
+      const reviewerName = isAdmin 
+        ? adminReviewerName.trim() 
+        : (customer?.full_name || customer?.email?.split('@')[0] || 'Customer');
       
       const result = await addReview(
         vendorId,
-        customer.id,
-        customerName,
+        isAdmin ? null : customer!.id,
+        reviewerName,
         reviewText.trim(),
-        rating
+        rating,
+        isAdmin
       );
 
       if (result.success) {
         // Reset form
         setReviewText('');
+        if (isAdmin) {
+          setAdminReviewerName('');
+        }
         setRating(5);
         setError('');
         
@@ -84,6 +97,9 @@ const AddReviewModal: React.FC<AddReviewModalProps> = ({
   const handleClose = () => {
     if (!isSubmitting) {
       setReviewText('');
+      if (isAdmin) {
+        setAdminReviewerName('');
+      }
       setRating(5);
       setError('');
       onClose();
@@ -100,14 +116,31 @@ const AddReviewModal: React.FC<AddReviewModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Customer Info Display */}
-          {customer && (
+          {/* Reviewer Info Display / Input */}
+          {isAdmin ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Reviewer Name *
+              </label>
+              <input
+                type="text"
+                value={adminReviewerName}
+                onChange={(e) => setAdminReviewerName(e.target.value)}
+                placeholder="Enter customer name (e.g. Priya R.)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-blue-600 font-medium">
+                Logged in as Admin. You can customize the name displayed on this review.
+              </p>
+            </div>
+          ) : customer ? (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-gray-700">
                 <span className="font-medium">Reviewing as:</span> {customer.full_name || customer.email}
               </p>
             </div>
-          )}
+          ) : null}
 
           {/* Star Rating */}
           <div className="space-y-2">
@@ -180,7 +213,7 @@ const AddReviewModal: React.FC<AddReviewModalProps> = ({
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !isAuthenticated || !customer || !reviewText.trim()}
+              disabled={isSubmitting || (!isAuthenticated && !isAdmin) || !reviewText.trim() || (isAdmin && !adminReviewerName.trim())}
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
               {isSubmitting ? 'Submitting...' : 'Submit Review'}

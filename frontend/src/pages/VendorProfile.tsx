@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -19,6 +19,8 @@ const VendorProfile = () => {
   const { vendorId } = useParams<{ vendorId: string }>();
   const { customer } = useCustomerAuth();
   const isAuthenticated = !!customer;
+  const isAdmin = localStorage.getItem("adminLoggedIn") === "true";
+  const navigate = useNavigate();
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [highlightedImages, setHighlightedImages] = useState<any[]>([]);
   const [allCatalogImages, setAllCatalogImages] = useState<any[]>([]);
@@ -58,6 +60,14 @@ const VendorProfile = () => {
       setCustomerReviews(reviews);
     } catch (error) {
       console.error('Error refreshing vendor data:', error);
+    }
+  };
+
+  const handleAddReviewClick = () => {
+    if (!customer && !isAdmin) {
+      navigate(`/customer-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+    } else {
+      setShowReviewModal(true);
     }
   };
 
@@ -1122,14 +1132,12 @@ I'm really excited to connect and explore working with you soon! ✨`;
                           from {customerReviews.length} {customerReviews.length === 1 ? 'review' : 'reviews'}
                         </div>
                       </div>
-                      {isAuthenticated && customer && (
-                        <Button
-                          onClick={() => setShowReviewModal(true)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                        >
-                          Add a Review
-                        </Button>
-                      )}
+                      <Button
+                        onClick={handleAddReviewClick}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        Add a Review
+                      </Button>
                     </div>
                   </div>
 
@@ -1141,7 +1149,7 @@ I'm really excited to connect and explore working with you soon! ✨`;
                             <div className="flex items-center gap-4">
                               <div className="w-14 h-14 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
                                 <span className="text-white font-bold text-lg">
-                                  {review.customer_name.split(' ').map(n => n[0]).join('')}
+                                  {review.customer_name ? review.customer_name.split(' ').map(n => n[0]).join('') : 'U'}
                                 </span>
                               </div>
                               <div>
@@ -1498,7 +1506,7 @@ I'm really excited to connect and explore working with you soon! ✨`;
         </div>
 
         {/* Add Review Modal */}
-        {isAuthenticated && customer && vendorId && (
+        {((isAuthenticated && customer) || isAdmin) && vendorId && (
           <AddReviewModal
             isOpen={showReviewModal}
             onClose={() => setShowReviewModal(false)}
