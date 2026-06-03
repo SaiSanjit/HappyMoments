@@ -141,7 +141,7 @@ const SmartRequest: React.FC = () => {
           .catch(err => console.error('Contact tracking error:', err));
       }
 
-      const message = `Hi ${vendor.spoc_name}! I found your ${vendor.category} services and I'm interested in learning more about your packages. Could you please share your availability and pricing details?`;
+      const message = `Hi ${vendor.spoc_name}, I found your ${vendor.category} services via Happy Moments and I'm interested in learning more about your packages. Could you please share your availability and pricing details?`;
       const whatsappUrl = `https://wa.me/${phoneNumber.replace(/[^\d]/g, '')}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
     }

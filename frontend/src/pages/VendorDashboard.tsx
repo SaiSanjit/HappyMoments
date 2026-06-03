@@ -101,6 +101,7 @@ const VendorDashboard: React.FC = () => {
   const [filteredCustomers, setFilteredCustomers] = useState<any[]>([]);
   const [customerStats, setCustomerStats] = useState<any>({});
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [customerStatusFilter, setCustomerStatusFilter] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState('');
@@ -260,12 +261,37 @@ const VendorDashboard: React.FC = () => {
     try {
       let result = [...customers];
       
+      // Status filter
+      if (customerStatusFilter !== 'all') {
+        if (customerStatusFilter === 'admin_sent') {
+          result = result.filter(c => c.is_admin_sent);
+        } else if (customerStatusFilter === 'contacted') {
+          result = result.filter(c => c.vendor_status === 'Contacted' || c.vendor_status === 'Customer Contacted');
+        } else if (customerStatusFilter === 'interested') {
+          result = result.filter(c => 
+            c.vendor_status === 'Customer Interested' || 
+            c.vendor_status === 'Discussion in Progress' || 
+            c.vendor_status === 'Quotation Shared' || 
+            c.vendor_status === 'Negotiation Ongoing' ||
+            c.vendor_status === 'Event Scheduled' ||
+            c.vendor_status === 'Service in Progress'
+          );
+        } else if (customerStatusFilter === 'completed') {
+          result = result.filter(c => 
+            c.vendor_status === 'Event Completed' || 
+            c.vendor_status === 'Service Completed' || 
+            c.vendor_status === 'Payment Settled'
+          );
+        }
+      }
+      
       // Search query filter
       if (customerSearchQuery && customerSearchQuery.trim()) {
         const query = customerSearchQuery.toLowerCase().trim();
         result = result.filter(customer => 
           customer.customer_name?.toLowerCase().includes(query) ||
           customer.status?.toLowerCase().includes(query) ||
+          customer.vendor_status?.toLowerCase().includes(query) ||
           customer.customer_phone?.includes(query) ||
           customer.customer_email?.toLowerCase().includes(query) ||
           customer.customer_location?.toLowerCase().includes(query)
@@ -304,12 +330,12 @@ const VendorDashboard: React.FC = () => {
     }
   }, [leads, searchQuery, filters]);
 
-  // Apply customer filters when customers or search query change
+  // Apply customer filters when customers, search query, or status filter changes
   useEffect(() => {
     if (customers.length > 0) {
       applyCustomerFilters();
     }
-  }, [customers, customerSearchQuery]);
+  }, [customers, customerSearchQuery, customerStatusFilter]);
 
   // Auto-refresh notifications every 30 seconds
   useEffect(() => {
@@ -417,12 +443,28 @@ const VendorDashboard: React.FC = () => {
 
   const loadLeadsData = async (vendorId: number) => {
     try {
+      // 1. Fetch manual CRM leads
       const [leadsData, statsData] = await Promise.all([
         getVendorLeads(vendorId),
         getVendorLeadStats(vendorId)
       ]);
+      
       setLeads(leadsData);
-      setLeadStats(statsData);
+      setFilteredLeads(leadsData);
+      
+      // Update CRM stats based on manual leads
+      if (statsData) {
+        const crmStats = {
+          total: leadsData.length,
+          new_lead: leadsData.filter(l => l.status === 'new_lead').length,
+          contacted: leadsData.filter(l => l.status === 'contacted').length,
+          negotiation: leadsData.filter(l => l.status === 'negotiation').length,
+          confirmed_booking: leadsData.filter(l => l.status === 'confirmed_booking').length,
+          completed: leadsData.filter(l => l.status === 'completed').length,
+          lost: leadsData.filter(l => l.status === 'lost').length
+        };
+        setLeadStats(crmStats);
+      }
     } catch (error) {
       console.error('Error loading leads data:', error);
     }
@@ -447,19 +489,32 @@ const VendorDashboard: React.FC = () => {
       const response = await getVendorCustomers(vendorId.toString());
       
       if (response.success && response.data) {
-        setCustomers(response.data);
+        // Exclude admin notifications (customer_id < 0 and status is 'Admin Notification')
+        const filteredData = response.data.filter(c => !(c.customer_id < 0 && c.status === 'Admin Notification'));
+        setCustomers(filteredData);
         
-          // Calculate customer stats based on vendor_status
+          // Calculate customer stats based on vendor_status (supporting both legacy and status pipeline values)
           const stats = {
-            total_customers: response.data.length,
-            admin_sent: response.data.filter(c => c.is_admin_sent).length,
-            contacted: response.data.filter(c => c.vendor_status === 'Contacted').length,
-            customer_interested: response.data.filter(c => c.vendor_status === 'Customer Interested').length,
-            deal_made: response.data.filter(c => c.vendor_status === 'Deal Made').length,
-            advance_received: response.data.filter(c => c.vendor_status === 'Advance Received').length,
-            event_completed: response.data.filter(c => c.vendor_status === 'Event Completed').length,
-            full_amount_settled: response.data.filter(c => c.vendor_status === 'Full Amount Settled').length,
-            closed: response.data.filter(c => c.vendor_status === 'Closed').length
+            total_customers: filteredData.length,
+            admin_sent: filteredData.filter(c => c.is_admin_sent).length,
+            contacted: filteredData.filter(c => c.vendor_status === 'Contacted' || c.vendor_status === 'Customer Contacted').length,
+            customer_interested: filteredData.filter(c => 
+              c.vendor_status === 'Customer Interested' || 
+              c.vendor_status === 'Discussion in Progress' || 
+              c.vendor_status === 'Quotation Shared' || 
+              c.vendor_status === 'Negotiation Ongoing' ||
+              c.vendor_status === 'Event Scheduled' ||
+              c.vendor_status === 'Service in Progress'
+            ).length,
+            deal_made: filteredData.filter(c => c.vendor_status === 'Deal Made' || c.vendor_status === 'Deal Confirmed').length,
+            advance_received: filteredData.filter(c => c.vendor_status === 'Advance Received').length,
+            event_completed: filteredData.filter(c => 
+              c.vendor_status === 'Event Completed' || 
+              c.vendor_status === 'Service Completed' || 
+              c.vendor_status === 'Payment Settled'
+            ).length,
+            full_amount_settled: filteredData.filter(c => c.vendor_status === 'Full Amount Settled' || c.vendor_status === 'Payment Settled').length,
+            closed: filteredData.filter(c => c.vendor_status === 'Closed' || c.vendor_status === 'Lost').length
           };
         setCustomerStats(stats);
       } else {
@@ -474,7 +529,42 @@ const VendorDashboard: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = async (leadId: number, newStatus: string) => {
+  const getExistingLeadsForModal = () => {
+    const list: Array<{ name: string; phone: string; email: string }> = [];
+    const seen = new Set<string>();
+
+    // 1. Add from manual leads
+    leads.forEach(l => {
+      const name = l.customer_name || '';
+      const phone = l.customer_phone || l.customer_mobile || '';
+      const email = l.customer_email || '';
+      const key = `${name.toLowerCase()}-${phone}`;
+      
+      if (name && !seen.has(key)) {
+        seen.add(key);
+        list.push({ name, phone, email });
+      }
+    });
+
+    // 2. Add from contacted customers
+    customers.forEach(c => {
+      const name = c.customer_name || '';
+      const phone = c.customer_phone || c.customer_mobile || '';
+      const email = c.customer_email || '';
+      const key = `${name.toLowerCase()}-${phone}`;
+      
+      if (name && !seen.has(key)) {
+        seen.add(key);
+        list.push({ name, phone, email });
+      }
+    });
+
+    return list;
+  };
+
+  const handleStatusUpdate = async (leadId: any, newStatus: string) => {
+    const isContactedLead = typeof leadId === 'string' && leadId.startsWith('contact_');
+
     // If changing to confirmed_booking, show deal price modal first
     if (newStatus === 'confirmed_booking') {
       const lead = leads.find(l => l.id === leadId);
@@ -486,10 +576,41 @@ const VendorDashboard: React.FC = () => {
     }
 
     try {
-      const result = await updateLeadStatus(leadId, newStatus);
-      if (result.success && vendor) {
-        // Reload leads data
-        loadLeadsData(parseInt(vendor.vendor_id));
+      if (isContactedLead) {
+        // Update contacted_vendors status
+        const contactId = leadId.replace('contact_', '');
+        // Map lead status back to vendor status format
+        let vendorStatus = 'Customer Contacted';
+        if (newStatus === 'contacted') vendorStatus = 'Customer Contacted';
+        else if (newStatus === 'negotiation') vendorStatus = 'Negotiation Ongoing';
+        else if (newStatus === 'proposal_sent') vendorStatus = 'Quotation Shared';
+        else if (newStatus === 'customer_decision_pending') vendorStatus = 'Event Scheduled';
+        else if (newStatus === 'confirmed_booking') vendorStatus = 'Deal Confirmed';
+        else if (newStatus === 'advance_received') vendorStatus = 'Advance Received';
+        else if (newStatus === 'completed') vendorStatus = 'Service Completed';
+        else if (newStatus === 'lost') vendorStatus = 'Lost';
+        
+        const lead = leads.find(l => l.id === leadId);
+        const result = await updateVendorStatusForContact(
+          contactId, 
+          vendorStatus,
+          lead?.customer_id,
+          lead?.vendor_id || vendor?.vendor_id
+        );
+        
+        if (result.success && vendor) {
+          // Reload all data
+          await Promise.all([
+            loadLeadsData(parseInt(vendor.vendor_id)),
+            loadCustomersData(parseInt(vendor.vendor_id))
+          ]);
+        }
+      } else {
+        const result = await updateLeadStatus(Number(leadId), newStatus);
+        if (result.success && vendor) {
+          // Reload leads data
+          loadLeadsData(parseInt(vendor.vendor_id));
+        }
       }
     } catch (error) {
       console.error('Error updating lead status:', error);
@@ -498,25 +619,48 @@ const VendorDashboard: React.FC = () => {
 
   const handleConfirmDeal = async (dealAmount: number) => {
     if (!confirmingLead) return;
+    const isContactedLead = typeof confirmingLead.id === 'string' && confirmingLead.id.startsWith('contact_');
 
     try {
-      // Update lead with both status and deal amount
-      const updateData = {
-        status: 'confirmed_booking',
-        deal_amount: dealAmount,
-        converted_to_booking: true,
-        conversion_date: new Date().toISOString(),
-      };
-
-      const result = await updateVendorLead(confirmingLead.id, updateData);
-      if (result.success && vendor) {
-        // Reload leads data
-        loadLeadsData(parseInt(vendor.vendor_id));
-        setShowDealPriceModal(false);
-        setConfirmingLead(null);
+      if (isContactedLead) {
+        const contactId = confirmingLead.id.replace('contact_', '');
+        const notes = `Deal confirmed for amount: ₹${dealAmount.toLocaleString()}`;
+        const result = await updateVendorStatusForContact(
+          contactId, 
+          'Deal Confirmed',
+          confirmingLead.customer_id,
+          confirmingLead.vendor_id || vendor?.vendor_id
+        );
+        if (result.success) {
+          await updateNotesForContact(contactId, notes);
+          if (vendor) {
+            await Promise.all([
+              loadLeadsData(parseInt(vendor.vendor_id)),
+              loadCustomersData(parseInt(vendor.vendor_id))
+            ]);
+          }
+          setShowDealPriceModal(false);
+          setConfirmingLead(null);
+        }
       } else {
-        console.error('Failed to confirm deal:', result.message);
-        alert('Failed to confirm deal. Please try again.');
+        // Update lead with both status and deal amount
+        const updateData = {
+          status: 'confirmed_booking',
+          deal_amount: dealAmount,
+          converted_to_booking: true,
+          conversion_date: new Date().toISOString(),
+        };
+
+        const result = await updateVendorLead(Number(confirmingLead.id), updateData);
+        if (result.success && vendor) {
+          // Reload leads data
+          loadLeadsData(parseInt(vendor.vendor_id));
+          setShowDealPriceModal(false);
+          setConfirmingLead(null);
+        } else {
+          console.error('Failed to confirm deal:', result.message);
+          alert('Failed to confirm deal. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error confirming deal:', error);
@@ -524,7 +668,7 @@ const VendorDashboard: React.FC = () => {
     }
   };
 
-  const handleDeleteLead = (leadId: number, customerName: string) => {
+  const handleDeleteLead = (leadId: any, customerName: string) => {
     // Show custom delete confirmation modal
     const lead = leads.find(l => l.id === leadId);
     setLeadToDelete(lead);
@@ -533,24 +677,28 @@ const VendorDashboard: React.FC = () => {
 
   const confirmDeleteLead = async () => {
     if (!leadToDelete) return;
+    const isContactedLead = typeof leadToDelete.id === 'string' && leadToDelete.id.startsWith('contact_');
     
     try {
-      // For now, delete from local state (replace with API call later)
-      const updatedLeads = leads.filter(lead => lead.id !== leadToDelete.id);
-      setLeads(updatedLeads);
-      
-      // Close modal and reset state
+      if (isContactedLead) {
+        const contactId = leadToDelete.id.replace('contact_', '');
+        const result = await removeContactVendor(leadToDelete.customer_id, leadToDelete.vendor_id);
+        if (result.success && vendor) {
+          await Promise.all([
+            loadLeadsData(parseInt(vendor.vendor_id)),
+            loadCustomersData(parseInt(vendor.vendor_id))
+          ]);
+        }
+      } else {
+        const result = await deleteVendorLead(Number(leadToDelete.id));
+        if (result.success && vendor) {
+          loadLeadsData(parseInt(vendor.vendor_id));
+        }
+      }
       setShowDeleteModal(false);
       setLeadToDelete(null);
-      
-      // Uncomment this when using real API:
-      // const result = await deleteVendorLead(leadToDelete.id);
-      // if (result.success && vendor) {
-      //   loadLeadsData(parseInt(vendor.vendor_id));
-      // } else {
-      //   console.error('Failed to delete lead:', result.error);
-      // }
-      } catch (error) {
+    } catch (error) {
+      console.error('Error deleting lead:', error);
       setShowDeleteModal(false);
       setLeadToDelete(null);
     }
@@ -1139,8 +1287,8 @@ const VendorDashboard: React.FC = () => {
             },
             { 
               id: 'leads', 
-              label: 'CRM & LEADS', 
-              mobileLabel: 'Leads',
+              label: 'EXTERNAL LEADS', 
+              mobileLabel: 'External Leads',
               icon: MessageSquare
             },
             { 
@@ -1305,31 +1453,46 @@ const VendorDashboard: React.FC = () => {
           <div className="space-y-6">
         {/* Customer Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4">
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:scale-105 duration-200 ${customerStatusFilter === 'all' ? 'ring-2 ring-orange-500 shadow-md' : 'hover:shadow-md'}`}
+            onClick={() => setCustomerStatusFilter('all')}
+          >
             <CardContent className="p-2 md:p-4 text-center">
               <p className="text-lg md:text-2xl font-bold text-[#001B5E]">{customerStats.total_customers || 0}</p>
               <p className="text-xs md:text-sm text-gray-600">Total Contacts</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:scale-105 duration-200 ${customerStatusFilter === 'admin_sent' ? 'ring-2 ring-purple-500 shadow-md' : 'hover:shadow-md'}`}
+            onClick={() => setCustomerStatusFilter('admin_sent')}
+          >
             <CardContent className="p-2 md:p-4 text-center">
               <p className="text-lg md:text-2xl font-bold text-purple-600">{customerStats.admin_sent || 0}</p>
               <p className="text-xs md:text-sm text-gray-600">👑 Admin Sent</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:scale-105 duration-200 ${customerStatusFilter === 'contacted' ? 'ring-2 ring-blue-500 shadow-md' : 'hover:shadow-md'}`}
+            onClick={() => setCustomerStatusFilter('contacted')}
+          >
             <CardContent className="p-2 md:p-4 text-center">
               <p className="text-lg md:text-2xl font-bold text-blue-600">{customerStats.contacted || 0}</p>
               <p className="text-xs md:text-sm text-gray-600">Contacted</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:scale-105 duration-200 ${customerStatusFilter === 'interested' ? 'ring-2 ring-yellow-500 shadow-md' : 'hover:shadow-md'}`}
+            onClick={() => setCustomerStatusFilter('interested')}
+          >
             <CardContent className="p-2 md:p-4 text-center">
               <p className="text-lg md:text-2xl font-bold text-yellow-600">{customerStats.customer_interested || 0}</p>
               <p className="text-xs md:text-sm text-gray-600">Interested</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all hover:scale-105 duration-200 ${customerStatusFilter === 'completed' ? 'ring-2 ring-green-500 shadow-md' : 'hover:shadow-md'}`}
+            onClick={() => setCustomerStatusFilter('completed')}
+          >
             <CardContent className="p-2 md:p-4 text-center">
               <p className="text-lg md:text-2xl font-bold text-green-600">{customerStats.event_completed || 0}</p>
               <p className="text-xs md:text-sm text-gray-600">Completed</p>
@@ -1463,36 +1626,36 @@ const VendorDashboard: React.FC = () => {
                     {/* Vendor Status Dropdown */}
                     <div className="flex-1">
                       <select
-                        value={customer.vendor_status || 'Contacted'}
+                        value={customer.vendor_status === 'Contacted' ? 'Customer Contacted' : (customer.vendor_status || 'Customer Contacted')}
                         onChange={(e) => handleVendorStatusUpdate(customer.contact_id.toString(), e.target.value)}
-                        className="w-full px-3 py-2 rounded-lg font-semibold shadow-md text-white border-0 focus:ring-2 focus:ring-orange-300 transition-all"
+                        className="w-full px-3 py-2 rounded-lg font-semibold shadow-md text-white border-0 focus:ring-2 focus:ring-orange-300 transition-all text-sm"
                         style={{
-                          background: customer.vendor_status === 'Event Completed' ? 
+                          background: customer.vendor_status === 'Event Completed' || customer.vendor_status === 'Service Completed' || customer.vendor_status === 'Payment Settled' ? 
                             'linear-gradient(135deg, #228B22 0%, #006400 100%)' :
-                            customer.vendor_status === 'Deal Made' ?
+                            customer.vendor_status === 'Deal Made' || customer.vendor_status === 'Deal Confirmed' ?
                             'linear-gradient(135deg, #32CD32 0%, #228B22 100%)' :
-                            customer.vendor_status === 'Customer Interested' ?
+                            customer.vendor_status === 'Customer Interested' || customer.vendor_status === 'Discussion in Progress' || customer.vendor_status === 'Quotation Shared' || customer.vendor_status === 'Negotiation Ongoing' || customer.vendor_status === 'Event Scheduled' || customer.vendor_status === 'Service in Progress' ?
                             'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' :
                             customer.vendor_status === 'Advance Received' ?
                             'linear-gradient(135deg, #4169E1 0%, #0000CD 100%)' :
                             customer.vendor_status === 'Full Amount Settled' ?
                             'linear-gradient(135deg, #9370DB 0%, #8A2BE2 100%)' :
-                            customer.vendor_status === 'Closed' ?
+                            customer.vendor_status === 'Closed' || customer.vendor_status === 'Lost' ?
                             'linear-gradient(135deg, #696969 0%, #2F4F4F 100%)' :
                             'linear-gradient(135deg, #FFA326 0%, #FF8C00 100%)'
                         }}
                       >
-                        <option value="Customer Contacted">📞 Customer Contacted</option>
-                        <option value="Discussion in Progress">💬 Discussion in Progress</option>
-                        <option value="Quotation Shared">📋 Quotation Shared</option>
-                        <option value="Negotiation Ongoing">🤝 Negotiation Ongoing</option>
-                        <option value="Deal Confirmed">✅ Deal Confirmed</option>
-                        <option value="Advance Received">💰 Advance Received</option>
-                        <option value="Event Scheduled">📅 Event Scheduled</option>
-                        <option value="Service in Progress">⚙️ Service in Progress</option>
-                        <option value="Service Completed">🎉 Service Completed</option>
-                        <option value="Payment Settled">💳 Payment Settled</option>
-                        <option value="Lost">❌ Lost</option>
+                        <option value="Customer Contacted" className="text-gray-900 bg-white">📞 Customer Contacted</option>
+                        <option value="Discussion in Progress" className="text-gray-900 bg-white">💬 Discussion in Progress</option>
+                        <option value="Quotation Shared" className="text-gray-900 bg-white">📋 Quotation Shared</option>
+                        <option value="Negotiation Ongoing" className="text-gray-900 bg-white">🤝 Negotiation Ongoing</option>
+                        <option value="Deal Confirmed" className="text-gray-900 bg-white">✅ Deal Confirmed</option>
+                        <option value="Advance Received" className="text-gray-900 bg-white">💰 Advance Received</option>
+                        <option value="Event Scheduled" className="text-gray-900 bg-white">📅 Event Scheduled</option>
+                        <option value="Service in Progress" className="text-gray-900 bg-white">⚙️ Service in Progress</option>
+                        <option value="Service Completed" className="text-gray-900 bg-white">🎉 Service Completed</option>
+                        <option value="Payment Settled" className="text-gray-900 bg-white">💳 Payment Settled</option>
+                        <option value="Lost" className="text-gray-900 bg-white">❌ Lost</option>
                       </select>
                     </div>
                     
@@ -1684,7 +1847,7 @@ const VendorDashboard: React.FC = () => {
                     }}
                   >
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    Manage Leads
+                    Manage External Leads
                   </Button>
                 </div>
               )}
@@ -1692,14 +1855,14 @@ const VendorDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Enhanced CRM & Leads Tab */}
+        {/* Enhanced External Leads Tab */}
         {activeTab === 'leads' && (
           <div className="space-y-4">
             
 
             {/* Header with Add Button on Right */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-              <h2 className="text-2xl font-bold text-white">My Leads</h2>
+              <h2 className="text-2xl font-bold text-white">External Leads</h2>
               
               {/* Add Lead Button on Right */}
               <Button 
@@ -2483,6 +2646,7 @@ const VendorDashboard: React.FC = () => {
           vendor={vendor}
           type="invoice"
           editData={editingInvoiceQuotation}
+          existingLeads={getExistingLeadsForModal()}
         />
       )}
 
@@ -2498,6 +2662,7 @@ const VendorDashboard: React.FC = () => {
           vendor={vendor}
           type="quotation"
           editData={editingInvoiceQuotation}
+          existingLeads={getExistingLeadsForModal()}
         />
       )}
 

@@ -106,24 +106,6 @@ router.post('/save-contact', async (req, res) => {
 
     console.log(`Saving contact: Customer ${customer_id} contacted Vendor ${vendor_id}`);
 
-    // Check if contact already exists
-    const { data: existingContact, error: checkError } = await supabase
-      .from('contacted_vendors')
-      .select('contact_id')
-      .eq('customer_id', customer_id)
-      .eq('vendor_id', vendor_id)
-      .single();
-
-    if (existingContact) {
-      console.log('Contact already exists, returning existing record');
-      return res.json({
-        success: true,
-        message: 'Contact already recorded',
-        data: existingContact,
-        already_contacted: true
-      });
-    }
-
     // Get vendor details for customer notification message
     const { data: vendorData, error: vendorError } = await supabase
       .from('vendors')
@@ -146,8 +128,75 @@ router.post('/save-contact', async (req, res) => {
     // Notification message for vendor: "Customer Name contacted you"
     const vendorNotificationMessage = `${customerName} contacted you`;
     
-    // Notification message for customer: "You contacted Vendor Name"
-    const customerNotificationMessage = `You contacted ${vendorName}`;
+    // Check if contact already exists
+    const { data: existingContact, error: checkError } = await supabase
+      .from('contacted_vendors')
+      .select('contact_id')
+      .eq('customer_id', customer_id)
+      .eq('vendor_id', vendor_id)
+      .single();
+
+    if (existingContact) {
+      console.log('Contact already exists, updating contacted_at and triggering notification');
+      
+      // Update contacted_at and set vendor_notified to true (unread)
+      const { data: updatedContact, error: updateError } = await supabase
+        .from('contacted_vendors')
+        .update({
+          contacted_at: new Date().toISOString(),
+          vendor_notified: true,
+          notification_message: vendorNotificationMessage
+        })
+        .eq('contact_id', existingContact.contact_id)
+        .select()
+        .single();
+        
+      if (updateError) {
+        console.error('Error updating existing contact:', updateError);
+      }
+      
+      // Insert in-app admin notification for the vendor
+      const { error: notifError } = await supabase
+        .from('admin_notifications')
+        .insert({
+          vendor_id: parseInt(vendor_id),
+          notification_type: 'whatsapp_contact',
+          title: `${customerName} contacted you via WhatsApp! 💬`,
+          message: `${customerName} opened a WhatsApp chat with you from HappyMoments. Respond quickly to convert them into a booking!`,
+          is_read: false,
+          admin_username: 'HappyMoments'
+        });
+
+      if (notifError) {
+        console.error('⚠️ Failed to insert admin notification (non-fatal):', notifError);
+      } else {
+        console.log(`✅ In-app notification created for vendor ${vendor_id}`);
+      }
+
+      // Send email notification to vendor if email is available
+      if (vendorEmail) {
+        const message = `${customerName} is interested in your services and contacted you via HappyMoments. Please respond promptly!`;
+        
+        sendContactNotificationEmail(vendorEmail, customerName, customerEmail, message, vendorName)
+          .then(result => {
+            if (result.success) {
+              console.log(`✅ Notification email sent to vendor: ${vendorEmail}`);
+            } else {
+              console.error(`❌ Failed to send notification email to vendor: ${result.error}`);
+            }
+          })
+          .catch(err => {
+            console.error('❌ Error sending notification email:', err);
+          });
+      }
+
+      return res.json({
+        success: true,
+        message: 'Contact updated and notifications sent successfully',
+        data: updatedContact || existingContact,
+        already_contacted: true
+      });
+    }
 
     // Insert new contact record with notification fields
     // Using vendor notification message since vendor_notified is true

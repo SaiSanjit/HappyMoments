@@ -232,7 +232,7 @@ const PhotographyVendors = () => {
 
   // WhatsApp integration
   const openWhatsApp = (photographer: any) => {
-    const message = `Hi ${photographer.ownerName}! I found your photography services on HappyMoments and I'm interested in learning more about your packages for my upcoming event. Could you please share your availability and pricing details?`;
+    const message = `Hi ${photographer.ownerName}, I found your photography services via Happy Moments and I'm interested in learning more about your packages. Could you please share your availability and pricing details?`;
     const whatsappUrl = `https://wa.me/919550793699?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };

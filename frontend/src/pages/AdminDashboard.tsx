@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Vendor } from "@/lib/supabase";
-import { getAllVendorsForAdmin, updateVendor, deleteVendor, getAllPendingChanges, reviewVendorProfileChange } from "@/services/supabaseService";
+import { getAllVendorsForAdmin, updateVendor, deleteVendor, getAllPendingChanges, reviewVendorProfileChange, getAdminLostDealsAndStats } from "@/services/supabaseService";
 import { adminSendCustomerToVendor } from "@/services/adminApiService";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import SuccessModal from "@/components/SuccessModal";
@@ -56,6 +56,12 @@ const AdminDashboard = () => {
   const [currentGreeting, setCurrentGreeting] = useState("");
   const [demonControlLevel, setDemonControlLevel] = useState(0);
   const [adminName, setAdminName] = useState("");
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [vendorStats, setVendorStats] = useState<any[]>([]);
+  const [lostDeals, setLostDeals] = useState<any[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [vendorStatsSearch, setVendorStatsSearch] = useState("");
+  const [lostDealsSearch, setLostDealsSearch] = useState("");
   const navigate = useNavigate();
 
   // Modal states
@@ -155,6 +161,58 @@ const AdminDashboard = () => {
   useEffect(() => {
     filterVendors();
   }, [vendors, searchTerm, filterStatus, filterCategory]);
+
+  useEffect(() => {
+    if (activeTab === "analytics") {
+      fetchAnalyticsData();
+    }
+  }, [activeTab]);
+
+  const fetchAnalyticsData = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const result = await getAdminLostDealsAndStats();
+      if (result.success && result.data) {
+        setContacts(result.data.contacts);
+        setVendorStats(result.data.vendorStats);
+        setLostDeals(result.data.lostDeals);
+      }
+    } catch (error) {
+      console.error("Error fetching admin analytics:", error);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const exportToCSV = (data: any[], filename: string) => {
+    if (data.length === 0) return;
+    
+    const headers = Object.keys(data[0]);
+    const csvRows = [];
+    
+    // Add headers row
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    for (const row of data) {
+      const values = headers.map(header => {
+        const val = row[header];
+        // Handle strings with commas by wrapping in quotes
+        const escaped = ('' + (val ?? '')).replace(/"/g, '\\"');
+        return `"${escaped}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+    
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
 
   const fetchVendors = async () => {
@@ -790,6 +848,17 @@ const AdminDashboard = () => {
               >
                 <Bot className="w-5 h-5 inline-block mr-3" />
                 Momo AI Advisor
+              </button>
+              <button
+                onClick={() => setActiveTab("analytics")}
+                className={`py-6 px-4 border-b-3 font-semibold text-sm transition-all duration-300 rounded-t-2xl ${
+                  activeTab === "analytics"
+                    ? "border-orange-500 text-slate-800 bg-gradient-to-b from-orange-50 to-transparent"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                <TrendingUp className="w-5 h-5 inline-block mr-3" />
+                Analytics & Lost Deals
               </button>
             </nav>
           </div>
@@ -1518,8 +1587,271 @@ const AdminDashboard = () => {
             <MomoChat vendors={vendors} />
           </div>
         )}
+
+        {/* Analytics & Lost Deals Tab */}
+        {activeTab === "analytics" && (
+          <div className="space-y-8 animate-fade-in pb-10">
+            {/* Loading State */}
+            {analyticsLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 bg-white/50 backdrop-blur-md rounded-2xl border border-wedding-orange/20">
+                <RefreshCw className="h-12 w-12 text-wedding-orange animate-spin mb-4" />
+                <p className="text-wedding-navy font-semibold">Summoning business intelligence...</p>
+              </div>
+            ) : (
+              <>
+                {/* Executive Cards Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  {/* Total Inquiries Card */}
+                  <div className="bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-xl rounded-2xl p-6 transition-all duration-300 hover:scale-102 hover:shadow-2xl">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Total Customer Contacts</p>
+                        <h3 className="text-3xl font-extrabold text-wedding-navy mt-2">{contacts.length}</h3>
+                        <p className="text-xs text-slate-400 mt-2">Aggregated customer inquiries</p>
+                      </div>
+                      <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600">
+                        <Users className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Won Deals Card */}
+                  <div className="bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-xl rounded-2xl p-6 transition-all duration-300 hover:scale-102 hover:shadow-2xl">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Won Deals</p>
+                        <h3 className="text-3xl font-extrabold text-green-600 mt-2">
+                          {contacts.filter(c => 
+                            c.vendor_status === 'Deal Confirmed' || 
+                            c.vendor_status === 'Deal Made' || 
+                            c.vendor_status === 'Advance Received' || 
+                            c.vendor_status === 'Service Completed' || 
+                            c.vendor_status === 'Payment Settled'
+                          ).length}
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-2">Successful business events</p>
+                      </div>
+                      <div className="p-3 bg-green-500/10 rounded-xl text-green-600">
+                        <CheckCircle className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Lost Opportunities Card */}
+                  <div className="bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-xl rounded-2xl p-6 transition-all duration-300 hover:scale-102 hover:shadow-2xl">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Lost Opportunities</p>
+                        <h3 className="text-3xl font-extrabold text-red-500 mt-2">{lostDeals.length}</h3>
+                        <p className="text-xs text-slate-400 mt-2">Deals marked lost or closed</p>
+                      </div>
+                      <div className="p-3 bg-red-500/10 rounded-xl text-red-500">
+                        <XCircle className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conversion Rate Card */}
+                  <div className="bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-xl rounded-2xl p-6 transition-all duration-300 hover:scale-102 hover:shadow-2xl">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-slate-500 text-sm font-semibold uppercase tracking-wider">Win Rate</p>
+                        <h3 className="text-3xl font-extrabold text-wedding-orange mt-2">
+                          {contacts.length > 0 ? Math.round((contacts.filter(c => 
+                            c.vendor_status === 'Deal Confirmed' || 
+                            c.vendor_status === 'Deal Made' || 
+                            c.vendor_status === 'Advance Received' || 
+                            c.vendor_status === 'Service Completed' || 
+                            c.vendor_status === 'Payment Settled'
+                          ).length / contacts.length) * 100) : 0}%
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-2">Deals won / Total inquiries</p>
+                      </div>
+                      <div className="p-3 bg-wedding-orange/10 rounded-xl text-wedding-orange">
+                        <TrendingUp className="h-6 w-6" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vendor Performance Stats Section */}
+                <div className="bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-2xl rounded-2xl p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-wedding-navy flex items-center">
+                        <Sparkles className="w-5 h-5 mr-2 text-wedding-orange" />
+                        Vendor Performance Statistics
+                      </h3>
+                      <p className="text-slate-500 text-xs mt-1">Analytics on customer inquiries, win rates, and closed statuses per vendor</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="relative flex-1 sm:flex-none sm:w-80">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-wedding-orange" />
+                        <input
+                          type="text"
+                          placeholder="Search vendors..."
+                          value={vendorStatsSearch}
+                          onChange={(e) => setVendorStatsSearch(e.target.value)}
+                          className="pl-9 pr-4 py-2 border border-wedding-orange/30 rounded-lg w-full text-sm text-wedding-navy focus:ring-wedding-orange focus:border-wedding-orange focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        onClick={() => exportToCSV(vendorStats, 'vendor_business_analytics')}
+                        className="bg-wedding-navy hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center shadow-md transform hover:scale-102 transition-all duration-300"
+                        title="Download Stats Excel/CSV"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-wedding-orange/10">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/80 text-wedding-navy text-xs uppercase font-extrabold tracking-wider border-b border-wedding-orange/15">
+                          <th className="py-4 px-6">Vendor Name</th>
+                          <th className="py-4 px-6">SPOC Name</th>
+                          <th className="py-4 px-6">Category</th>
+                          <th className="py-4 px-6 text-center">Total Inquiries</th>
+                          <th className="py-4 px-6 text-center text-green-600">Won Deals</th>
+                          <th className="py-4 px-6 text-center text-red-500">Lost Deals</th>
+                          <th className="py-4 px-6 text-center text-blue-500">Pending</th>
+                          <th className="py-4 px-6 text-center text-wedding-orange">Win Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-wedding-orange/10 bg-white">
+                        {vendorStats
+                          .filter(v => 
+                            v.brand_name.toLowerCase().includes(vendorStatsSearch.toLowerCase()) ||
+                            v.spoc_name.toLowerCase().includes(vendorStatsSearch.toLowerCase()) ||
+                            v.category.toLowerCase().includes(vendorStatsSearch.toLowerCase())
+                          )
+                          .map((v) => (
+                            <tr key={v.vendor_id} className="hover:bg-slate-50/50 transition-colors duration-150 text-sm text-slate-700">
+                              <td className="py-4 px-6 font-bold text-wedding-navy">{v.brand_name}</td>
+                              <td className="py-4 px-6">{v.spoc_name}</td>
+                              <td className="py-4 px-6">
+                                <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                  {v.category}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 text-center font-semibold">{v.totalContacts}</td>
+                              <td className="py-4 px-6 text-center font-bold text-green-600">{v.wonCount}</td>
+                              <td className="py-4 px-6 text-center font-bold text-red-500">{v.lostCount}</td>
+                              <td className="py-4 px-6 text-center font-semibold text-blue-500">{v.inProgressCount}</td>
+                              <td className="py-4 px-6 text-center">
+                                <span className={`px-3 py-1 rounded-full text-xs font-extrabold shadow-sm ${
+                                  v.winRate >= 50 ? 'bg-green-100 text-green-700' :
+                                  v.winRate >= 20 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {v.winRate}%
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        {vendorStats.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="py-10 text-center text-slate-400 font-semibold bg-white">
+                              No statistics available at the moment.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Lost Deals detailed log */}
+                <div className="bg-white/80 backdrop-blur-md border border-wedding-orange/20 shadow-2xl rounded-2xl p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                      <h3 className="text-xl font-bold text-wedding-navy flex items-center">
+                        <Archive className="w-5 h-5 mr-2 text-red-500" />
+                        Lost Deals & Opportunities Log
+                      </h3>
+                      <p className="text-slate-500 text-xs mt-1">Detailed repository of lost inquiries including client contacts and vendor reasons</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                      <div className="relative flex-1 sm:flex-none sm:w-80">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-wedding-orange" />
+                        <input
+                          type="text"
+                          placeholder="Search lost customer or vendor..."
+                          value={lostDealsSearch}
+                          onChange={(e) => setLostDealsSearch(e.target.value)}
+                          className="pl-9 pr-4 py-2 border border-wedding-orange/30 rounded-lg w-full text-sm text-wedding-navy focus:ring-wedding-orange focus:border-wedding-orange focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        onClick={() => exportToCSV(lostDeals, 'lost_deals_detailed_report')}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center shadow-md transform hover:scale-102 transition-all duration-300"
+                        title="Download Lost Deals Detailed Report"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-wedding-orange/10">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100/80 text-wedding-navy text-xs uppercase font-extrabold tracking-wider border-b border-wedding-orange/15">
+                          <th className="py-4 px-6">Date Lost</th>
+                          <th className="py-4 px-6">Vendor</th>
+                          <th className="py-4 px-6">Customer Name</th>
+                          <th className="py-4 px-6">Customer Contact</th>
+                          <th className="py-4 px-6">Reason for Loss</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-wedding-orange/10 bg-white">
+                        {lostDeals
+                          .filter(d => 
+                            d.vendor_name.toLowerCase().includes(lostDealsSearch.toLowerCase()) ||
+                            d.customer_name.toLowerCase().includes(lostDealsSearch.toLowerCase()) ||
+                            d.lost_reason.toLowerCase().includes(lostDealsSearch.toLowerCase())
+                          )
+                          .map((d, index) => (
+                            <tr key={`lost-${d.contact_id || index}`} className="hover:bg-red-50/20 transition-colors duration-150 text-sm text-slate-700">
+                              <td className="py-4 px-6 whitespace-nowrap text-slate-500 font-medium">
+                                {d.lost_at ? new Date(d.lost_at).toLocaleDateString() : 'N/A'}
+                              </td>
+                              <td className="py-4 px-6 font-bold text-wedding-navy">{d.vendor_name}</td>
+                              <td className="py-4 px-6 font-semibold text-slate-900">{d.customer_name}</td>
+                              <td className="py-4 px-6">
+                                <div className="flex flex-col text-xs">
+                                  <span className="font-semibold text-slate-700">{d.customer_phone}</span>
+                                  <span className="text-slate-400">{d.customer_email}</span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-6">
+                                <span className="bg-red-50 text-red-700 px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-100 inline-block max-w-md break-words">
+                                  ⚠️ {d.lost_reason}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        {lostDeals.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="py-10 text-center text-slate-400 font-semibold bg-white">
+                              No lost deals recorded at the moment.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        )}
+      </div>
+    </div>
       </div>
 
       {/* Modals */}

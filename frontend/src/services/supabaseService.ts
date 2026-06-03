@@ -3123,3 +3123,159 @@ export const getReviewsByState = async (state: string): Promise<{ success: boole
     return { success: false, error: 'Failed to fetch reviews by state' };
   }
 };
+
+// Get lost deals and vendor analytics for the admin dashboard
+export const getAdminLostDealsAndStats = async (): Promise<{
+  success: boolean;
+  data?: {
+    contacts: any[];
+    vendorStats: any[];
+    lostDeals: any[];
+  };
+  error?: string;
+}> => {
+  try {
+    console.log('📊 Fetching lost deals and vendor stats for Admin Dashboard...');
+
+    // 1. Fetch all rows from contacted_vendors
+    const { data: contacts, error: contactError } = await supabase
+      .from('contacted_vendors')
+      .select('*')
+      .order('contacted_at', { ascending: false });
+
+    if (contactError) {
+      console.error('Error fetching contacted_vendors:', contactError);
+      return { success: false, error: contactError.message };
+    }
+
+    if (!contacts || contacts.length === 0) {
+      return { success: true, data: { contacts: [], vendorStats: [], lostDeals: [] } };
+    }
+
+    // 2. Fetch unique customer and vendor profiles in parallel
+    const customerIds = [...new Set(contacts.map(c => c.customer_id).filter(id => id && id > 0))];
+    const vendorIds = [...new Set(contacts.map(c => c.vendor_id).filter(id => id))];
+
+    const [customersRes, vendorsRes] = await Promise.all([
+      customerIds.length > 0
+        ? supabase.from('customers').select('id, full_name, email, mobile_number').in('id', customerIds)
+        : Promise.resolve({ data: [] }),
+      vendorIds.length > 0
+        ? supabase.from('vendors').select('vendor_id, brand_name, spoc_name, category, categories').in('vendor_id', vendorIds)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const customersMap = (customersRes.data || []).reduce((acc: any, c: any) => {
+      acc[c.id] = c;
+      return acc;
+    }, {});
+
+    const vendorsMap = (vendorsRes.data || []).reduce((acc: any, v: any) => {
+      acc[v.vendor_id] = v;
+      return acc;
+    }, {});
+
+    // 3. Map contacts with customer and vendor profiles
+    const mappedContacts = contacts.map(c => {
+      const vendorInfo = vendorsMap[c.vendor_id] || null;
+      const customerInfo = customersMap[c.customer_id] || null;
+
+      // Handle categories array/string normalization safely
+      let categoryDisplay = 'Vendor';
+      if (vendorInfo) {
+        const cats = vendorInfo.categories || vendorInfo.category;
+        if (Array.isArray(cats) && cats.length > 0) {
+          categoryDisplay = cats.join(' & ');
+        } else if (typeof cats === 'string') {
+          categoryDisplay = cats;
+        }
+      }
+
+      return {
+        ...c,
+        vendor: vendorInfo,
+        customer: customerInfo,
+        categoryDisplay
+      };
+    });
+
+    // 4. Compute Vendor Statistics
+    const vendorStatsMap: Record<string, any> = {};
+
+    mappedContacts.forEach(c => {
+      if (!c.vendor_id) return;
+      
+      const vId = c.vendor_id;
+      const brandName = c.vendor?.brand_name || `Vendor ${vId}`;
+      const spocName = c.vendor?.spoc_name || 'N/A';
+      
+      if (!vendorStatsMap[vId]) {
+        vendorStatsMap[vId] = {
+          vendor_id: vId,
+          brand_name: brandName,
+          spoc_name: spocName,
+          category: c.categoryDisplay,
+          totalContacts: 0,
+          wonCount: 0,
+          lostCount: 0,
+          inProgressCount: 0
+        };
+      }
+
+      const statsObj = vendorStatsMap[vId];
+      statsObj.totalContacts += 1;
+
+      const vStatus = c.vendor_status || 'Contacted';
+      if (vStatus === 'Lost' || vStatus === 'Closed') {
+        statsObj.lostCount += 1;
+      } else if (
+        vStatus === 'Deal Confirmed' || 
+        vStatus === 'Deal Made' || 
+        vStatus === 'Advance Received' || 
+        vStatus === 'Service Completed' || 
+        vStatus === 'Payment Settled'
+      ) {
+        statsObj.wonCount += 1;
+      } else {
+        statsObj.inProgressCount += 1;
+      }
+    });
+
+    const vendorStatsList = Object.values(vendorStatsMap).map((v: any) => {
+      const winRate = v.totalContacts > 0 ? Math.round((v.wonCount / v.totalContacts) * 100) : 0;
+      return {
+        ...v,
+        winRate
+      };
+    });
+
+    // 5. Build Lost Deals detailed log
+    const lostDeals = mappedContacts
+      .filter(c => c.vendor_status === 'Lost' || c.vendor_status === 'Closed')
+      .map(c => ({
+        contact_id: c.contact_id,
+        customer_id: c.customer_id,
+        customer_name: c.customer?.full_name || 'Customer',
+        customer_phone: c.customer?.mobile_number || 'N/A',
+        customer_email: c.customer?.email || 'N/A',
+        vendor_id: c.vendor_id,
+        vendor_name: c.vendor?.brand_name || `Vendor ${c.vendor_id}`,
+        lost_reason: c.notes || 'No reason specified',
+        lost_at: c.contacted_at || c.created_at
+      }));
+
+    console.log(`📊 Loaded stats for ${vendorStatsList.length} vendors and ${lostDeals.length} lost deals.`);
+
+    return {
+      success: true,
+      data: {
+        contacts: mappedContacts,
+        vendorStats: vendorStatsList,
+        lostDeals
+      }
+    };
+  } catch (error: any) {
+    console.error('Error fetching admin analytics data:', error);
+    return { success: false, error: error.message || 'Failed to fetch admin analytics' };
+  }
+};

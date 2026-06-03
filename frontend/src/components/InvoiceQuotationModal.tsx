@@ -14,6 +14,7 @@ interface InvoiceQuotationModalProps {
   vendor: any;
   type: 'invoice' | 'quotation';
   editData?: InvoiceQuotation | null;
+  existingLeads?: Array<{ name: string; phone: string; email: string }>;
 }
 
 const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
@@ -22,7 +23,8 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
   onSave,
   vendor,
   type,
-  editData
+  editData,
+  existingLeads = []
 }) => {
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -36,9 +38,35 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedLead, setSelectedLead] = useState<string>('new');
+
+  const handleLeadSelect = (val: string) => {
+    setSelectedLead(val);
+    if (val === 'new') {
+      setFormData(prev => ({
+        ...prev,
+        customer_name: '',
+        customer_mobile: '',
+        customer_email: ''
+      }));
+    } else {
+      const idx = parseInt(val);
+      const lead = existingLeads?.[idx];
+      if (lead) {
+        setFormData(prev => ({
+          ...prev,
+          customer_name: lead.name,
+          customer_mobile: lead.phone,
+          customer_email: lead.email
+        }));
+      }
+    }
+  };
 
   // Initialize form data
   useEffect(() => {
+    if (!isOpen) return;
+
     if (editData) {
       setFormData({
         customer_name: editData.customer_name || '',
@@ -49,6 +77,16 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         template_id: editData.template_id || 'template-1',
         tax_rate: editData.tax_rate || 18
       });
+      
+      // Try to find matching lead
+      const matchIdx = existingLeads?.findIndex(l => 
+        l.name.toLowerCase() === (editData.customer_name || '').toLowerCase()
+      );
+      if (matchIdx !== undefined && matchIdx !== -1) {
+        setSelectedLead(String(matchIdx));
+      } else {
+        setSelectedLead('new');
+      }
     } else {
       setFormData({
         customer_name: '',
@@ -61,8 +99,9 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         template_id: 'template-1',
         tax_rate: 18
       });
+      setSelectedLead('new');
     }
-  }, [editData, type, isOpen]);
+  }, [isOpen, editData, type]);
 
   const addService = () => {
     const newService: ServiceItem = {
@@ -308,13 +347,36 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
                   <CardTitle className="text-lg">Customer Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {existingLeads && existingLeads.length > 0 && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Existing Lead / Customer
+                      </label>
+                      <select
+                        value={selectedLead}
+                        onChange={(e) => handleLeadSelect(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white font-medium text-slate-700 cursor-pointer shadow-sm text-sm"
+                      >
+                        <option value="new">➕ Add New Customer (Type Manually)</option>
+                        {existingLeads.map((lead, idx) => (
+                          <option key={idx} value={String(idx)}>
+                            👤 {lead.name} {lead.phone ? `(${lead.phone})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Customer Name *
                     </label>
                     <Input
                       value={formData.customer_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, customer_name: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, customer_name: e.target.value }));
+                        setSelectedLead('new');
+                      }}
                       placeholder="Enter customer name"
                       className={errors.customer_name ? 'border-red-500' : ''}
                     />
@@ -329,7 +391,10 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
                     </label>
                     <Input
                       value={formData.customer_mobile}
-                      onChange={(e) => setFormData(prev => ({ ...prev, customer_mobile: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, customer_mobile: e.target.value }));
+                        setSelectedLead('new');
+                      }}
                       placeholder="Enter mobile number"
                       className={errors.customer_mobile ? 'border-red-500' : ''}
                     />
@@ -344,7 +409,10 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
                     </label>
                     <Input
                       value={formData.customer_email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, customer_email: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, customer_email: e.target.value }));
+                        setSelectedLead('new');
+                      }}
                       placeholder="Enter email address"
                       type="email"
                     />

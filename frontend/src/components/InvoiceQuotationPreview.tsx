@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Download, Send, Edit, Print, MessageCircle, Mail, Share2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { InvoiceQuotation } from '../services/invoiceService';
+import { getVendorBrandLogoFromStorage } from '../services/supabaseStorageService';
 
 interface InvoiceQuotationPreviewProps {
   invoiceQuotation: InvoiceQuotation;
@@ -21,6 +22,21 @@ const InvoiceQuotationPreview: React.FC<InvoiceQuotationPreviewProps> = ({
   onSend
 }) => {
   const [showShareOptions, setShowShareOptions] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadLogo = async () => {
+      if (vendor && vendor.vendor_id) {
+        try {
+          const logo = await getVendorBrandLogoFromStorage(vendor.vendor_id);
+          setLogoUrl(logo);
+        } catch (e) {
+          console.error('Error loading logo in preview:', e);
+        }
+      }
+    };
+    loadLogo();
+  }, [vendor]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,12 +55,10 @@ const InvoiceQuotationPreview: React.FC<InvoiceQuotationPreviewProps> = ({
     };
   }, [showShareOptions]);
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    return `Rs. ${amount.toLocaleString('en-IN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(amount);
+    })}`;
   };
 
   const formatDate = (dateString: string) => {
@@ -93,7 +107,7 @@ Thank you for your business!
 
 Best regards,
 ${vendor.brand_name}
-${vendor.phone ? `Phone: ${vendor.phone}` : ''}
+${(vendor.phone_number || vendor.whatsapp_number) ? `Phone: ${vendor.phone_number || vendor.whatsapp_number}` : ''}
 ${vendor.email ? `Email: ${vendor.email}` : ''}`;
 
     const emailUrl = `mailto:${invoiceQuotation.customer_email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -147,10 +161,14 @@ ${vendor.email ? `Email: ${vendor.email}` : ''}`;
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">
                     {vendor.brand_name || 'Your Business Name'}
                   </h1>
-                  <p className="text-gray-600 mb-1">{vendor.category}</p>
-                  <p className="text-gray-600 mb-1">{vendor.address}</p>
-                  <p className="text-gray-600 mb-1">Phone: {vendor.phone}</p>
-                  <p className="text-gray-600">Email: {vendor.email}</p>
+                  {vendor.category && <p className="text-gray-600 mb-1">{vendor.category}</p>}
+                  {vendor.address && <p className="text-gray-600 mb-1">{vendor.address}</p>}
+                  {(vendor.phone_number || vendor.whatsapp_number) && (
+                    <p className="text-gray-600 mb-1">
+                      Phone: {vendor.phone_number || vendor.whatsapp_number}
+                    </p>
+                  )}
+                  {vendor.email && <p className="text-gray-600">Email: {vendor.email}</p>}
                 </div>
                 <div className="text-right">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -193,10 +211,10 @@ ${vendor.email ? `Email: ${vendor.email}` : ''}`;
                       Qty
                     </th>
                     <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-900">
-                      Rate (₹)
+                      Rate (Rs.)
                     </th>
                     <th className="border border-gray-300 px-4 py-3 text-right font-semibold text-gray-900">
-                      Amount (₹)
+                      Amount (Rs.)
                     </th>
                   </tr>
                 </thead>
@@ -257,11 +275,23 @@ ${vendor.email ? `Email: ${vendor.email}` : ''}`;
 
             {/* Footer */}
             <div className="border-t pt-6">
-              <div className="text-center text-gray-600">
-                <p>Thank you for your business!</p>
-                <p className="text-sm mt-2">
-                  For any queries, please contact us at {vendor.phone} or {vendor.email}
-                </p>
+              <div className="flex justify-between items-center">
+                {logoUrl ? (
+                  <>
+                    <img 
+                      src={logoUrl} 
+                      alt="Brand Logo" 
+                      className="w-16 h-16 object-contain rounded-lg border border-gray-200 bg-white"
+                    />
+                    <p className="font-semibold text-gray-700 text-center flex-1 pr-16">
+                      Thank you for your business!
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-semibold text-gray-700 text-center flex-1">
+                    Thank you for your business!
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -102,7 +102,7 @@ const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({
   };
 
   const openWhatsApp = () => {
-    const message = `Hi ${vendor.spoc_name}! I found your ${vendor.category} services and I'm interested in learning more about your packages. Could you please share your availability and pricing details?`;
+    const message = `Hi ${vendor.spoc_name}, I found your ${vendor.category} services via Happy Moments and I'm interested in learning more about your packages. Could you please share your availability and pricing details?`;
     const phoneNumber = vendor.whatsapp_number || vendor.phone_number;
     
     if (!phoneNumber) {
