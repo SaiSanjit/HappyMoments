@@ -16,7 +16,7 @@ import { Menu, X, ChevronDown, User, Lock, LogIn, AlertCircle, Heart, Users, Bel
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserStore } from "@/store/userStore";
 import { useCustomerAuth } from "@/contexts/CustomerAuthContext";
-import { vendorLogin, saveVendorSession, getLoggedInVendor, vendorLogout, getCustomerNotifications, markAllCustomerNotificationsAsRead, clearCustomerNotification } from "@/services/supabaseService";
+import { vendorLogin, saveVendorSession, getLoggedInVendor, vendorLogout, getCustomerNotifications, markAllCustomerNotificationsAsRead, clearCustomerNotification, resetVendorPassword } from "@/services/supabaseService";
 import { getLikedVendors } from "@/services/likedVendorsApiService";
 import { CATEGORY_LIST } from "@/constants/categories";
 import { API_BASE_URL } from "@/config/api";
@@ -28,6 +28,11 @@ const Header = () => {
   const [vendorPassword, setVendorPassword] = useState('');
   const [vendorLoginLoading, setVendorLoginLoading] = useState(false);
   const [vendorLoginError, setVendorLoginError] = useState('');
+  const [showVendorForgotPassword, setShowVendorForgotPassword] = useState(false);
+  const [vendorResetEmail, setVendorResetEmail] = useState('');
+  const [vendorResetLoading, setVendorResetLoading] = useState(false);
+  const [vendorResetMessage, setVendorResetMessage] = useState('');
+  const [vendorResetError, setVendorResetError] = useState('');
   const [loggedInVendor, setLoggedInVendor] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginType, setLoginType] = useState<'customer' | 'vendor'>('customer');
@@ -179,6 +184,31 @@ const Header = () => {
       setVendorLoginError('An error occurred during login. Please try again.');
     } finally {
       setVendorLoginLoading(false);
+    }
+  };
+
+  const handleVendorForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorResetEmail.trim()) {
+      setVendorResetError('Please enter your registered email address');
+      return;
+    }
+    setVendorResetLoading(true);
+    setVendorResetError('');
+    setVendorResetMessage('');
+    try {
+      const result = await resetVendorPassword(vendorResetEmail.trim());
+      if (result.success) {
+        setVendorResetMessage(result.message);
+        setVendorResetEmail('');
+      } else {
+        setVendorResetError(result.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      setVendorResetError('An error occurred during password reset. Please try again.');
+    } finally {
+      setVendorResetLoading(false);
     }
   };
 
@@ -625,11 +655,19 @@ const Header = () => {
       )}
 
       {/* Login Modal */}
-      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+      <Dialog open={showLoginModal} onOpenChange={(open) => {
+        setShowLoginModal(open);
+        if (!open) {
+          setShowVendorForgotPassword(false);
+          setVendorResetEmail('');
+          setVendorResetMessage('');
+          setVendorResetError('');
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold text-gray-800">
-              {loginType === 'customer' ? 'Customer Login' : 'Vendor Login'}
+              {loginType === 'customer' ? 'Customer Login' : (showVendorForgotPassword ? 'Reset Password' : 'Vendor Login')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
@@ -655,47 +693,115 @@ const Header = () => {
             {/* Vendor Login */}
             {loginType === 'vendor' && (
               <div className="space-y-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Access your vendor dashboard to manage bookings and update your profile</p>
-                </div>
+                {showVendorForgotPassword ? (
+                  <>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Request a new temporary password</p>
+                    </div>
 
-                {vendorLoginError && (
-                  <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">{vendorLoginError}</span>
-                  </div>
+                    {vendorResetError && (
+                      <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">{vendorResetError}</span>
+                      </div>
+                    )}
+
+                    {vendorResetMessage && (
+                      <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                        <span className="text-sm">{vendorResetMessage}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleVendorForgotPassword} className="space-y-3">
+                      <div>
+                        <Input
+                          type="email"
+                          placeholder="Registered Email Address"
+                          value={vendorResetEmail}
+                          onChange={(e) => setVendorResetEmail(e.target.value)}
+                          required
+                          className="w-full"
+                          disabled={vendorResetLoading}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={vendorResetLoading}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        {vendorResetLoading ? 'Resetting Password...' : 'Reset Password'}
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowVendorForgotPassword(false);
+                          setVendorResetError('');
+                          setVendorResetMessage('');
+                        }}
+                        className="w-full text-center text-xs text-orange-500 hover:underline mt-1"
+                        disabled={vendorResetLoading}
+                      >
+                        Back to Login
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Access your vendor dashboard to manage bookings and update your profile</p>
+                    </div>
+
+                    {vendorLoginError && (
+                      <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">{vendorLoginError}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleVendorLogin} className="space-y-3">
+                      <div>
+                        <Input
+                          type="text"
+                          placeholder="Vendor Username"
+                          value={vendorUsername}
+                          onChange={(e) => setVendorUsername(e.target.value)}
+                          required
+                          className="w-full"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Input
+                          type="password"
+                          placeholder="Password"
+                          value={vendorPassword}
+                          onChange={(e) => setVendorPassword(e.target.value)}
+                          required
+                          className="w-full"
+                        />
+                        <div className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowVendorForgotPassword(true);
+                              setVendorLoginError('');
+                            }}
+                            className="text-xs text-orange-500 hover:underline"
+                          >
+                            Forgot password?
+                          </button>
+                        </div>
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={vendorLoginLoading}
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        {vendorLoginLoading ? 'Signing In...' : 'Sign In as Vendor'}
+                      </Button>
+                    </form>
+                  </>
                 )}
-
-                <form onSubmit={handleVendorLogin} className="space-y-3">
-                  <div>
-                    <Input
-                      type="text"
-                      placeholder="Vendor Username"
-                      value={vendorUsername}
-                      onChange={(e) => setVendorUsername(e.target.value)}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="password"
-                      placeholder="Password"
-                      value={vendorPassword}
-                      onChange={(e) => setVendorPassword(e.target.value)}
-                      required
-                      className="w-full"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={vendorLoginLoading}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                  >
-                    {vendorLoginLoading ? 'Signing In...' : 'Sign In as Vendor'}
-                  </Button>
-                </form>
-
               </div>
             )}
           </div>

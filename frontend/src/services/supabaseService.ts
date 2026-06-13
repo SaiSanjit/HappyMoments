@@ -202,7 +202,8 @@ export const addVendor = async (vendorData: Omit<Vendor, 'created_at' | 'updated
       password: password,
       is_active: true,
       created_at: new Date().toISOString(),
-      last_login: null
+      last_login: null,
+      vendor_name: data.brand_name
     };
 
     const { error: credentialsError } = await supabase
@@ -1210,7 +1211,7 @@ export const vendorLogin = async (username: string, password: string): Promise<{
       .eq('username', username)
       .eq('password', password)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return { success: false, message: 'Invalid username or password' };
@@ -1230,6 +1231,73 @@ export const vendorLogin = async (username: string, password: string): Promise<{
   } catch (error) {
     console.error('Error during vendor login:', error);
     return { success: false, message: 'Login failed. Please try again.' };
+  }
+};
+
+// Reset vendor password by generating a new one and emailing it
+export const resetVendorPassword = async (email: string): Promise<{ success: boolean, message: string }> => {
+  try {
+    console.log(`🔑 Resetting password for vendor email: ${email}`);
+
+    // 1. Find the vendor by email
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('vendor_id, brand_name, email')
+      .eq('email', email.trim())
+      .maybeSingle();
+
+    if (vendorError || !vendor) {
+      console.error('Vendor not found or error:', vendorError);
+      return { success: false, message: 'No registered vendor account found with this email address.' };
+    }
+
+    // 2. Generate a new password
+    const newPassword = generatePassword();
+
+    // 3. Update the password in vendor_credentials table
+    const { error: credError } = await supabase
+      .from('vendor_credentials')
+      .update({ password: newPassword })
+      .eq('vendor_id', vendor.vendor_id);
+
+    if (credError) {
+      console.error('Error updating vendor password:', credError);
+      return { success: false, message: 'Failed to reset password. Please contact support.' };
+    }
+
+    // 4. Send email containing the new password
+    const { sendEmailWithNodemailer } = await import('./smtpEmailService');
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #ff6b35; text-align: center;">🔑 Vendor Password Reset</h2>
+        <p>Dear <strong>${vendor.brand_name}</strong>,</p>
+        <p>Your password has been reset successfully. Here are your new login credentials:</p>
+        <div style="background-color: #f9f9f9; border-left: 4px solid #ff6b35; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 16px;">
+          <strong>Username / Vendor ID:</strong> ${vendor.vendor_id}<br/>
+          <strong>New Password:</strong> ${newPassword}
+        </div>
+        <p>For security reasons, please log in and change your password in your settings as soon as possible.</p>
+        <p>Best regards,<br/>The HappyMoments Team</p>
+      </div>
+    `;
+
+    const emailResult = await sendEmailWithNodemailer({
+      to: vendor.email,
+      subject: '🔑 Your HappyMoments Vendor Password Has Been Reset',
+      html: emailHtml,
+      text: `Dear ${vendor.brand_name},\n\nYour password has been reset. Here are your new credentials:\n\nUsername / Vendor ID: ${vendor.vendor_id}\nNew Password: ${newPassword}\n\nBest regards,\nThe HappyMoments Team`
+    });
+
+    if (emailResult.success) {
+      return { success: true, message: 'A new password has been sent to your registered email address.' };
+    } else {
+      console.error('Failed to send password reset email:', emailResult.error);
+      return { success: false, message: 'Password reset but we failed to send the email. Please contact support.' };
+    }
+
+  } catch (error) {
+    console.error('Unexpected error in resetVendorPassword:', error);
+    return { success: false, message: 'An unexpected error occurred. Please try again.' };
   }
 };
 
