@@ -11,7 +11,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 const CustomerLogin: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, resetPassword } = useCustomerAuth();
+  const { signIn, sendCustomerResetCode, resetCustomerPasswordWithCode } = useCustomerAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -24,7 +24,11 @@ const CustomerLogin: React.FC = () => {
 
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1 = Email, 2 = Code
   const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
@@ -94,7 +98,7 @@ const CustomerLogin: React.FC = () => {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleSendResetCode = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!resetEmail.trim()) {
@@ -107,15 +111,56 @@ const CustomerLogin: React.FC = () => {
     setResetMessage('');
 
     try {
-      const result = await resetPassword(resetEmail.trim());
+      const result = await sendCustomerResetCode(resetEmail.trim());
       if (result.success) {
         setResetMessage(result.message);
-        setResetEmail('');
+        setForgotPasswordStep(2);
+      } else {
+        setResetError(result.message || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('Customer send reset code error:', error);
+      setResetError('An error occurred while sending code. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPasswordWithCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!resetCode.trim() || !newPassword || !confirmPassword) {
+      setResetError('All fields are required');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setResetError('Passwords do not match');
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError('');
+    setResetMessage('');
+
+    try {
+      const result = await resetCustomerPasswordWithCode(resetEmail.trim(), resetCode.trim(), newPassword);
+      if (result.success) {
+        setResetMessage(result.message);
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep(1);
+          setResetEmail('');
+          setResetCode('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setResetMessage('');
+        }, 3000);
       } else {
         setResetError(result.message || 'Failed to reset password');
       }
     } catch (error) {
-      console.error('Customer forgot password error:', error);
+      console.error('Customer reset password with code error:', error);
       setResetError('An error occurred during password reset. Please try again.');
     } finally {
       setResetLoading(false);
@@ -131,54 +176,143 @@ const CustomerLogin: React.FC = () => {
           </CardTitle>
           <CardDescription className="text-center">
             {showForgotPassword 
-              ? 'Enter your email address to receive a temporary password'
+              ? (forgotPasswordStep === 1 
+                  ? 'Enter your email address to receive a verification code' 
+                  : 'Enter the verification code and set your new password')
               : 'Sign in to access your saved search preferences and personalized recommendations'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {showForgotPassword ? (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
-              {resetError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{resetError}</AlertDescription>
-                </Alert>
-              )}
-              {resetMessage && (
-                <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg">
-                  <AlertDescription>{resetMessage}</AlertDescription>
+            forgotPasswordStep === 1 ? (
+              <form onSubmit={handleSendResetCode} className="space-y-4">
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                {resetMessage && (
+                  <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg text-sm">
+                    <AlertDescription>{resetMessage}</AlertDescription>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email Address</Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="Enter your registered email"
+                    disabled={resetLoading}
+                    required
+                  />
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="reset-email">Email Address</Label>
-                <Input
-                  id="reset-email"
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="Enter your registered email"
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={resetLoading}>
+                  {resetLoading ? 'Sending Code...' : 'Send Verification Code'}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotPasswordStep(1);
+                    setResetError('');
+                    setResetMessage('');
+                  }}
+                  className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
                   disabled={resetLoading}
-                  required
-                />
-              </div>
+                >
+                  Back to Login
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPasswordWithCode} className="space-y-4">
+                {resetError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{resetError}</AlertDescription>
+                  </Alert>
+                )}
+                {resetMessage && (
+                  <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg text-sm">
+                    <AlertDescription>{resetMessage}</AlertDescription>
+                  </div>
+                )}
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={resetLoading}>
-                {resetLoading ? 'Resetting Password...' : 'Reset Password'}
-              </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email-display">Email Address</Label>
+                  <Input
+                    id="reset-email-display"
+                    type="email"
+                    value={resetEmail}
+                    disabled
+                  />
+                </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForgotPassword(false);
-                  setResetError('');
-                  setResetMessage('');
-                }}
-                className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
-                disabled={resetLoading}
-              >
-                Back to Login
-              </button>
-            </form>
+                <div className="space-y-2">
+                  <Label htmlFor="verification-code">Verification Access Code</Label>
+                  <Input
+                    id="verification-code"
+                    type="text"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    placeholder="Enter 6-digit access code"
+                    disabled={resetLoading}
+                    maxLength={6}
+                    required
+                    className="text-center font-mono text-lg tracking-widest"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    disabled={resetLoading}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    disabled={resetLoading}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={resetLoading}>
+                  {resetLoading ? 'Resetting Password...' : 'Reset Password'}
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotPasswordStep(1);
+                    setResetError('');
+                    setResetMessage('');
+                    setResetCode('');
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
+                  disabled={resetLoading}
+                >
+                  Back to Email Input
+                </button>
+              </form>
+            )
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {errors.general && (

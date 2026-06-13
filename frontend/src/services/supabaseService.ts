@@ -1234,10 +1234,10 @@ export const vendorLogin = async (username: string, password: string): Promise<{
   }
 };
 
-// Reset vendor password by generating a new one and emailing it
-export const resetVendorPassword = async (email: string): Promise<{ success: boolean, message: string }> => {
+// Send a reset verification code to vendor email
+export const sendVendorResetCode = async (email: string): Promise<{ success: boolean, message: string }> => {
   try {
-    console.log(`🔑 Resetting password for vendor email: ${email}`);
+    console.log(`🔑 Generating reset code for vendor email: ${email}`);
 
     // 1. Find the vendor by email
     const { data: vendor, error: vendorError } = await supabase
@@ -1251,52 +1251,116 @@ export const resetVendorPassword = async (email: string): Promise<{ success: boo
       return { success: false, message: 'No registered vendor account found with this email address.' };
     }
 
-    // 2. Generate a new password
-    const newPassword = generatePassword();
+    // 2. Generate a 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 15 * 60 * 1000; // 15 mins expiry
 
-    // 3. Update the password in vendor_credentials table
+    // 3. Update the password in vendor_credentials table to 'OTP:code:expiry'
+    const otpString = `OTP:${otp}:${expiry}`;
     const { error: credError } = await supabase
       .from('vendor_credentials')
-      .update({ password: newPassword })
+      .update({ password: otpString })
       .eq('vendor_id', vendor.vendor_id);
 
     if (credError) {
-      console.error('Error updating vendor password:', credError);
-      return { success: false, message: 'Failed to reset password. Please contact support.' };
+      console.error('Error updating vendor reset code:', credError);
+      return { success: false, message: 'Failed to generate reset code. Please try again.' };
     }
 
-    // 4. Send email containing the new password
+    // 4. Send email containing the OTP code
     const { sendEmailWithNodemailer } = await import('./smtpEmailService');
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #ff6b35; text-align: center;">🔑 Vendor Password Reset</h2>
+        <h2 style="color: #ff6b35; text-align: center;">🔑 Password Reset Verification Code</h2>
         <p>Dear <strong>${vendor.brand_name}</strong>,</p>
-        <p>Your password has been reset successfully. Here are your new login credentials:</p>
-        <div style="background-color: #f9f9f9; border-left: 4px solid #ff6b35; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 16px;">
-          <strong>Username / Vendor ID:</strong> ${vendor.vendor_id}<br/>
-          <strong>New Password:</strong> ${newPassword}
+        <p>We received a request to reset your password. Use the following access code to set your new password. This code will expire in 15 minutes:</p>
+        <div style="background-color: #f9f9f9; border-left: 4px solid #ff6b35; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #ff6b35;">
+          ${otp}
         </div>
-        <p>For security reasons, please log in and change your password in your settings as soon as possible.</p>
+        <p>If you did not request this reset, please ignore this email.</p>
         <p>Best regards,<br/>The HappyMoments Team</p>
       </div>
     `;
 
     const emailResult = await sendEmailWithNodemailer({
       to: vendor.email,
-      subject: '🔑 Your HappyMoments Vendor Password Has Been Reset',
+      subject: '🔑 Your HappyMoments Vendor Password Reset Code',
       html: emailHtml,
-      text: `Dear ${vendor.brand_name},\n\nYour password has been reset. Here are your new credentials:\n\nUsername / Vendor ID: ${vendor.vendor_id}\nNew Password: ${newPassword}\n\nBest regards,\nThe HappyMoments Team`
+      text: `Dear ${vendor.brand_name},\n\nWe received a request to reset your password. Use the following access code to reset your password. This code will expire in 15 minutes:\n\n${otp}\n\nBest regards,\nThe HappyMoments Team`
     });
 
     if (emailResult.success) {
-      return { success: true, message: 'A new password has been sent to your registered email address.' };
+      return { success: true, message: 'A verification access code has been sent to your email.' };
     } else {
-      console.error('Failed to send password reset email:', emailResult.error);
-      return { success: false, message: 'Password reset but we failed to send the email. Please contact support.' };
+      console.error('Failed to send reset email:', emailResult.error);
+      return { success: false, message: 'Reset code generated but email sending failed. Please contact support.' };
     }
 
   } catch (error) {
-    console.error('Unexpected error in resetVendorPassword:', error);
+    console.error('Unexpected error in sendVendorResetCode:', error);
+    return { success: false, message: 'An unexpected error occurred. Please try again.' };
+  }
+};
+
+// Reset vendor password using verification code
+export const resetVendorPasswordWithCode = async (email: string, code: string, newPassword: string): Promise<{ success: boolean, message: string }> => {
+  try {
+    console.log(`🔑 Resetting password with code for vendor email: ${email}`);
+
+    // 1. Find the vendor by email
+    const { data: vendor, error: vendorError } = await supabase
+      .from('vendors')
+      .select('vendor_id, email')
+      .eq('email', email.trim())
+      .maybeSingle();
+
+    if (vendorError || !vendor) {
+      return { success: false, message: 'No registered vendor account found with this email address.' };
+    }
+
+    // 2. Fetch credential for the vendor
+    const { data: cred, error: credError } = await supabase
+      .from('vendor_credentials')
+      .select('password')
+      .eq('vendor_id', vendor.vendor_id)
+      .maybeSingle();
+
+    if (credError || !cred) {
+      return { success: false, message: 'No credential record found for this vendor.' };
+    }
+
+    // 3. Validate OTP format, code and expiry
+    if (!cred.password || !cred.password.startsWith('OTP:')) {
+      return { success: false, message: 'No active password reset request found.' };
+    }
+
+    const parts = cred.password.split(':'); // ['OTP', code, expiry]
+    const storedCode = parts[1];
+    const storedExpiry = parseInt(parts[2]);
+
+    if (storedCode !== code.trim()) {
+      return { success: false, message: 'Invalid verification access code.' };
+    }
+
+    if (Date.now() > storedExpiry) {
+      return { success: false, message: 'Verification access code has expired. Please request a new one.' };
+    }
+
+    // 4. Update the password
+    const { error: updateError } = await supabase
+      .from('vendor_credentials')
+      .update({ password: newPassword })
+      .eq('vendor_id', vendor.vendor_id);
+
+    if (updateError) {
+      console.error('Error updating vendor password:', updateError);
+      return { success: false, message: 'Failed to reset password. Please try again.' };
+    }
+
+    return { success: true, message: 'Your password has been reset successfully. You can now log in.' };
+
+  } catch (error) {
+    console.error('Unexpected error in resetVendorPasswordWithCode:', error);
     return { success: false, message: 'An unexpected error occurred. Please try again.' };
   }
 };

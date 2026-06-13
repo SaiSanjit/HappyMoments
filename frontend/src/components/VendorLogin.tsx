@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { User, Lock, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { vendorLogin, saveVendorSession, resetVendorPassword } from '../services/supabaseService';
+import { vendorLogin, saveVendorSession, sendVendorResetCode, resetVendorPasswordWithCode } from '../services/supabaseService';
 
 interface VendorLoginProps {
   onClose?: () => void;
@@ -20,7 +20,11 @@ const VendorLogin: React.FC<VendorLoginProps> = ({ onClose }) => {
 
   // Forgot Password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1 = Email, 2 = Code
   const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
@@ -61,28 +65,62 @@ const VendorLogin: React.FC<VendorLoginProps> = ({ onClose }) => {
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleSendResetCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!resetEmail.trim()) {
       setResetError('Please enter your registered email address');
       return;
     }
-
     setResetLoading(true);
     setResetError('');
     setResetMessage('');
-
     try {
-      const result = await resetVendorPassword(resetEmail.trim());
+      const result = await sendVendorResetCode(resetEmail.trim());
       if (result.success) {
         setResetMessage(result.message);
-        setResetEmail('');
+        setForgotPasswordStep(2);
+      } else {
+        setResetError(result.message || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('Reset password send code error:', error);
+      setResetError('An error occurred while sending the code. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPasswordWithCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetCode.trim() || !newPassword || !confirmPassword) {
+      setResetError('All fields are required');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError('Passwords do not match');
+      return;
+    }
+    setResetLoading(true);
+    setResetError('');
+    setResetMessage('');
+    try {
+      const result = await resetVendorPasswordWithCode(resetEmail.trim(), resetCode.trim(), newPassword);
+      if (result.success) {
+        setResetMessage(result.message);
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep(1);
+          setResetEmail('');
+          setResetCode('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setResetMessage('');
+        }, 3000);
       } else {
         setResetError(result.message || 'Failed to reset password');
       }
     } catch (error) {
-      console.error('Reset password error:', error);
+      console.error('Reset password with code error:', error);
       setResetError('An error occurred during password reset. Please try again.');
     } finally {
       setResetLoading(false);
@@ -103,60 +141,154 @@ const VendorLogin: React.FC<VendorLoginProps> = ({ onClose }) => {
       
       <CardContent>
         {showForgotPassword ? (
-          <form onSubmit={handleForgotPassword} className="space-y-4">
-            {resetError && (
-              <div className="flex items-center gap-2 p-3 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">{resetError}</span>
+          forgotPasswordStep === 1 ? (
+            <form onSubmit={handleSendResetCode} className="space-y-4">
+              {resetError && (
+                <div className="flex items-center gap-2 p-3 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{resetError}</span>
+                </div>
+              )}
+              
+              {resetMessage && (
+                <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                  <span className="text-sm">{resetMessage}</span>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <label htmlFor="resetEmail" className="text-sm font-medium text-gray-700">
+                  Registered Email Address
+                </label>
+                <Input
+                  id="resetEmail"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Enter your registered email"
+                  disabled={resetLoading}
+                  required
+                />
               </div>
-            )}
-            
-            {resetMessage && (
-              <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
-                <span className="text-sm">{resetMessage}</span>
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <label htmlFor="resetEmail" className="text-sm font-medium text-gray-700">
-                Registered Email Address
-              </label>
-              <Input
-                id="resetEmail"
-                type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="Enter your registered email"
+
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={resetLoading}
-                required
-              />
-              <p className="text-xs text-gray-500">
-                A new temporary password will be generated and sent to this email address.
-              </p>
-            </div>
+              >
+                {resetLoading ? 'Sending Code...' : 'Send Verification Code'}
+              </Button>
 
-            <Button 
-              type="submit" 
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              disabled={resetLoading}
-            >
-              {resetLoading ? 'Resetting Password...' : 'Reset Password'}
-            </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setForgotPasswordStep(1);
+                  setResetError('');
+                  setResetMessage('');
+                }}
+                className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
+                disabled={resetLoading}
+              >
+                Back to Login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleResetPasswordWithCode} className="space-y-4">
+              {resetError && (
+                <div className="flex items-center gap-2 p-3 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{resetError}</span>
+                </div>
+              )}
+              
+              {resetMessage && (
+                <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                  <span className="text-sm">{resetMessage}</span>
+                </div>
+              )}
 
-            <button
-              type="button"
-              onClick={() => {
-                setShowForgotPassword(false);
-                setResetError('');
-                setResetMessage('');
-              }}
-              className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
-              disabled={resetLoading}
-            >
-              Back to Login
-            </button>
-          </form>
+              <div className="space-y-2">
+                <label htmlFor="resetEmailDisplay" className="text-sm font-medium text-gray-700">
+                  Registered Email Address
+                </label>
+                <Input
+                  id="resetEmailDisplay"
+                  type="email"
+                  value={resetEmail}
+                  disabled
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="resetCode" className="text-sm font-medium text-gray-700">
+                  Verification Code
+                </label>
+                <Input
+                  id="resetCode"
+                  type="text"
+                  value={resetCode}
+                  onChange={(e) => setResetCode(e.target.value)}
+                  placeholder="Enter 6-digit access code"
+                  disabled={resetLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
+                  New Password
+                </label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  disabled={resetLoading}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                  Confirm Password
+                </label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  disabled={resetLoading}
+                  required
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={resetLoading}
+              >
+                {resetLoading ? 'Resetting Password...' : 'Reset Password'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotPasswordStep(1);
+                  setResetError('');
+                  setResetMessage('');
+                }}
+                className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
+                disabled={resetLoading}
+              >
+                Back to Email Step
+              </button>
+            </form>
+          )
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (

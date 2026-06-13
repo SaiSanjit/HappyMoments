@@ -16,7 +16,7 @@ import { Menu, X, ChevronDown, User, Lock, LogIn, AlertCircle, Heart, Users, Bel
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserStore } from "@/store/userStore";
 import { useCustomerAuth } from "@/contexts/CustomerAuthContext";
-import { vendorLogin, saveVendorSession, getLoggedInVendor, vendorLogout, getCustomerNotifications, markAllCustomerNotificationsAsRead, clearCustomerNotification, resetVendorPassword } from "@/services/supabaseService";
+import { vendorLogin, saveVendorSession, getLoggedInVendor, vendorLogout, getCustomerNotifications, markAllCustomerNotificationsAsRead, clearCustomerNotification, sendVendorResetCode, resetVendorPasswordWithCode } from "@/services/supabaseService";
 import { getLikedVendors } from "@/services/likedVendorsApiService";
 import { CATEGORY_LIST } from "@/constants/categories";
 import { API_BASE_URL } from "@/config/api";
@@ -29,7 +29,11 @@ const Header = () => {
   const [vendorLoginLoading, setVendorLoginLoading] = useState(false);
   const [vendorLoginError, setVendorLoginError] = useState('');
   const [showVendorForgotPassword, setShowVendorForgotPassword] = useState(false);
+  const [vendorForgotPasswordStep, setVendorForgotPasswordStep] = useState(1); // 1 = Email, 2 = Code
   const [vendorResetEmail, setVendorResetEmail] = useState('');
+  const [vendorResetCode, setVendorResetCode] = useState('');
+  const [vendorNewPassword, setVendorNewPassword] = useState('');
+  const [vendorConfirmPassword, setVendorConfirmPassword] = useState('');
   const [vendorResetLoading, setVendorResetLoading] = useState(false);
   const [vendorResetMessage, setVendorResetMessage] = useState('');
   const [vendorResetError, setVendorResetError] = useState('');
@@ -187,7 +191,7 @@ const Header = () => {
     }
   };
 
-  const handleVendorForgotPassword = async (e: React.FormEvent) => {
+  const handleVendorSendResetCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!vendorResetEmail.trim()) {
       setVendorResetError('Please enter your registered email address');
@@ -197,15 +201,53 @@ const Header = () => {
     setVendorResetError('');
     setVendorResetMessage('');
     try {
-      const result = await resetVendorPassword(vendorResetEmail.trim());
+      const result = await sendVendorResetCode(vendorResetEmail.trim());
       if (result.success) {
         setVendorResetMessage(result.message);
-        setVendorResetEmail('');
+        setVendorForgotPasswordStep(2);
+      } else {
+        setVendorResetError(result.message || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('Vendor forgot password send code error:', error);
+      setVendorResetError('An error occurred. Please try again.');
+    } finally {
+      setVendorResetLoading(false);
+    }
+  };
+
+  const handleVendorResetPasswordWithCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorResetCode.trim() || !vendorNewPassword || !vendorConfirmPassword) {
+      setVendorResetError('All fields are required');
+      return;
+    }
+    if (vendorNewPassword !== vendorConfirmPassword) {
+      setVendorResetError('Passwords do not match');
+      return;
+    }
+    setVendorResetLoading(true);
+    setVendorResetError('');
+    setVendorResetMessage('');
+    try {
+      const result = await resetVendorPasswordWithCode(vendorResetEmail.trim(), vendorResetCode.trim(), vendorNewPassword);
+      if (result.success) {
+        setVendorResetMessage(result.message);
+        setTimeout(() => {
+          setShowVendorForgotPassword(false);
+          setVendorForgotPasswordStep(1);
+          setVendorResetEmail('');
+          setVendorResetCode('');
+          setVendorNewPassword('');
+          setVendorConfirmPassword('');
+          setVendorResetMessage('');
+          setShowLoginModal(false);
+        }, 3000);
       } else {
         setVendorResetError(result.message || 'Failed to reset password');
       }
     } catch (error) {
-      console.error('Password reset error:', error);
+      console.error('Vendor reset password with code error:', error);
       setVendorResetError('An error occurred during password reset. Please try again.');
     } finally {
       setVendorResetLoading(false);
@@ -659,7 +701,11 @@ const Header = () => {
         setShowLoginModal(open);
         if (!open) {
           setShowVendorForgotPassword(false);
+          setVendorForgotPasswordStep(1);
           setVendorResetEmail('');
+          setVendorResetCode('');
+          setVendorNewPassword('');
+          setVendorConfirmPassword('');
           setVendorResetMessage('');
           setVendorResetError('');
         }
@@ -694,58 +740,145 @@ const Header = () => {
             {loginType === 'vendor' && (
               <div className="space-y-4">
                 {showVendorForgotPassword ? (
-                  <>
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Request a new temporary password</p>
-                    </div>
-
-                    {vendorResetError && (
-                      <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-sm">{vendorResetError}</span>
+                  vendorForgotPasswordStep === 1 ? (
+                    <>
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Enter your email address to receive a verification code</p>
                       </div>
-                    )}
 
-                    {vendorResetMessage && (
-                      <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
-                        <span className="text-sm">{vendorResetMessage}</span>
-                      </div>
-                    )}
+                      {vendorResetError && (
+                        <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm">{vendorResetError}</span>
+                        </div>
+                      )}
 
-                    <form onSubmit={handleVendorForgotPassword} className="space-y-3">
-                      <div>
-                        <Input
-                          type="email"
-                          placeholder="Registered Email Address"
-                          value={vendorResetEmail}
-                          onChange={(e) => setVendorResetEmail(e.target.value)}
-                          required
-                          className="w-full"
+                      {vendorResetMessage && (
+                        <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                          <span className="text-sm">{vendorResetMessage}</span>
+                        </div>
+                      )}
+
+                      <form onSubmit={handleVendorSendResetCode} className="space-y-3">
+                        <div>
+                          <Input
+                            type="email"
+                            placeholder="Registered Email Address"
+                            value={vendorResetEmail}
+                            onChange={(e) => setVendorResetEmail(e.target.value)}
+                            required
+                            className="w-full"
+                            disabled={vendorResetLoading}
+                          />
+                        </div>
+                        <Button
+                          type="submit"
                           disabled={vendorResetLoading}
-                        />
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                        >
+                          {vendorResetLoading ? 'Sending Code...' : 'Send Verification Code'}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowVendorForgotPassword(false);
+                            setVendorForgotPasswordStep(1);
+                            setVendorResetError('');
+                            setVendorResetMessage('');
+                          }}
+                          className="w-full text-center text-xs text-orange-500 hover:underline mt-1"
+                          disabled={vendorResetLoading}
+                        >
+                          Back to Login
+                        </button>
+                      </form>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Enter the verification code and set your new password</p>
                       </div>
-                      <Button
-                        type="submit"
-                        disabled={vendorResetLoading}
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                      >
-                        {vendorResetLoading ? 'Resetting Password...' : 'Reset Password'}
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowVendorForgotPassword(false);
-                          setVendorResetError('');
-                          setVendorResetMessage('');
-                        }}
-                        className="w-full text-center text-xs text-orange-500 hover:underline mt-1"
-                        disabled={vendorResetLoading}
-                      >
-                        Back to Login
-                      </button>
-                    </form>
-                  </>
+
+                      {vendorResetError && (
+                        <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm">{vendorResetError}</span>
+                        </div>
+                      )}
+
+                      {vendorResetMessage && (
+                        <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                          <span className="text-sm">{vendorResetMessage}</span>
+                        </div>
+                      )}
+
+                      <form onSubmit={handleVendorResetPasswordWithCode} className="space-y-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500">Email Address</label>
+                          <Input
+                            type="email"
+                            value={vendorResetEmail}
+                            disabled
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <Input
+                            type="text"
+                            placeholder="Verification Code"
+                            value={vendorResetCode}
+                            onChange={(e) => setVendorResetCode(e.target.value)}
+                            required
+                            className="w-full"
+                            disabled={vendorResetLoading}
+                          />
+                        </div>
+                        <div>
+                          <Input
+                            type="password"
+                            placeholder="New Password"
+                            value={vendorNewPassword}
+                            onChange={(e) => setVendorNewPassword(e.target.value)}
+                            required
+                            className="w-full"
+                            disabled={vendorResetLoading}
+                          />
+                        </div>
+                        <div>
+                          <Input
+                            type="password"
+                            placeholder="Confirm New Password"
+                            value={vendorConfirmPassword}
+                            onChange={(e) => setVendorConfirmPassword(e.target.value)}
+                            required
+                            className="w-full"
+                            disabled={vendorResetLoading}
+                          />
+                        </div>
+                        <Button
+                          type="submit"
+                          disabled={vendorResetLoading}
+                          className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                        >
+                          {vendorResetLoading ? 'Resetting Password...' : 'Reset Password'}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVendorForgotPasswordStep(1);
+                            setVendorResetError('');
+                            setVendorResetMessage('');
+                          }}
+                          className="w-full text-center text-xs text-orange-500 hover:underline mt-1"
+                          disabled={vendorResetLoading}
+                        >
+                          Back to Email Step
+                        </button>
+                      </form>
+                    </>
+                  )
                 ) : (
                   <>
                     <div className="text-center">
@@ -901,7 +1034,7 @@ const Header = () => {
 
 // Customer Login Modal Content Component
 const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignup: () => void }> = ({ onClose, onSwitchToSignup }) => {
-  const { signIn, resetPassword } = useCustomerAuth();
+  const { signIn, sendCustomerResetCode, resetCustomerPasswordWithCode } = useCustomerAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -910,7 +1043,11 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
 
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1 = Email, 2 = Code
   const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
@@ -959,7 +1096,7 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleSendResetCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail.trim()) {
       setResetError('Email address is required');
@@ -969,15 +1106,53 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
     setResetError('');
     setResetMessage('');
     try {
-      const result = await resetPassword(resetEmail.trim());
+      const result = await sendCustomerResetCode(resetEmail.trim());
       if (result.success) {
         setResetMessage(result.message);
-        setResetEmail('');
+        setForgotPasswordStep(2);
+      } else {
+        setResetError(result.message || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('Customer forgot password send code error:', error);
+      setResetError('An error occurred. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetPasswordWithCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetCode.trim() || !newPassword || !confirmPassword) {
+      setResetError('All fields are required');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError('Passwords do not match');
+      return;
+    }
+    setResetLoading(true);
+    setResetError('');
+    setResetMessage('');
+    try {
+      const result = await resetCustomerPasswordWithCode(resetEmail.trim(), resetCode.trim(), newPassword);
+      if (result.success) {
+        setResetMessage(result.message);
+        setTimeout(() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep(1);
+          setResetEmail('');
+          setResetCode('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setResetMessage('');
+          onClose();
+        }, 3000);
       } else {
         setResetError(result.message || 'Failed to reset password');
       }
     } catch (error) {
-      console.error('Customer forgot password error:', error);
+      console.error('Customer reset password with code error:', error);
       setResetError('An error occurred during password reset. Please try again.');
     } finally {
       setResetLoading(false);
@@ -995,53 +1170,146 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
       </div>
 
       {showForgotPassword ? (
-        <form onSubmit={handleForgotPassword} className="space-y-4">
-          {resetError && (
-            <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{resetError}</span>
-            </div>
-          )}
-          
-          {resetMessage && (
-            <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
-              <span className="text-sm">{resetMessage}</span>
-            </div>
-          )}
+        forgotPasswordStep === 1 ? (
+          <form onSubmit={handleSendResetCode} className="space-y-4">
+            {resetError && (
+              <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{resetError}</span>
+              </div>
+            )}
+            
+            {resetMessage && (
+              <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                <span className="text-sm">{resetMessage}</span>
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <label htmlFor="modal-reset-email" className="text-sm font-medium text-gray-700">
-              Email Address
-            </label>
-            <Input
-              id="modal-reset-email"
-              type="email"
-              value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
-              placeholder="Enter your registered email"
+            <div className="space-y-2">
+              <label htmlFor="modal-reset-email" className="text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <Input
+                id="modal-reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Enter your registered email"
+                disabled={resetLoading}
+                required
+              />
+            </div>
+
+            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={resetLoading}>
+              {resetLoading ? 'Sending Code...' : 'Send Verification Code'}
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowForgotPassword(false);
+                setForgotPasswordStep(1);
+                setResetError('');
+                setResetMessage('');
+              }}
+              className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
               disabled={resetLoading}
-              required
-            />
-          </div>
+            >
+              Back to Login
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleResetPasswordWithCode} className="space-y-4">
+            {resetError && (
+              <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{resetError}</span>
+              </div>
+            )}
+            
+            {resetMessage && (
+              <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+                <span className="text-sm">{resetMessage}</span>
+              </div>
+            )}
 
-          <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={resetLoading}>
-            {resetLoading ? 'Resetting Password...' : 'Reset Password'}
-          </Button>
+            <div className="space-y-2">
+              <label htmlFor="modal-reset-email-display" className="text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <Input
+                id="modal-reset-email-display"
+                type="email"
+                value={resetEmail}
+                disabled
+              />
+            </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setShowForgotPassword(false);
-              setResetError('');
-              setResetMessage('');
-            }}
-            className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
-            disabled={resetLoading}
-          >
-            Back to Login
-          </button>
-        </form>
+            <div className="space-y-2">
+              <label htmlFor="modal-reset-code" className="text-sm font-medium text-gray-700">
+                Verification Code
+              </label>
+              <Input
+                id="modal-reset-code"
+                type="text"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                placeholder="Enter 6-digit access code"
+                disabled={resetLoading}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="modal-reset-password" className="text-sm font-medium text-gray-700">
+                New Password
+              </label>
+              <Input
+                id="modal-reset-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                disabled={resetLoading}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="modal-reset-confirm-password" className="text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <Input
+                id="modal-reset-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                disabled={resetLoading}
+                required
+              />
+            </div>
+
+            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={resetLoading}>
+              {resetLoading ? 'Resetting Password...' : 'Reset Password'}
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setForgotPasswordStep(1);
+                setResetError('');
+                setResetMessage('');
+              }}
+              className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
+              disabled={resetLoading}
+            >
+              Back to Email Step
+            </button>
+          </form>
+        )
       ) : (
         <>
           {errors.general && (

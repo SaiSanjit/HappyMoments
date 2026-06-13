@@ -57,8 +57,8 @@ interface CustomerAuthContextType {
   updateSearchFilter: (filterId: string, filterData: any, filterName?: string) => Promise<{ filter: CustomerSearchFilter | null; error: any }>;
   deleteSearchFilter: (filterId: string) => Promise<{ error: any }>;
   saveSearchHistory: (searchType: 'voice' | 'manual' | 'smart_request', searchQuery?: string, searchFilters?: any, resultsCount?: number) => Promise<{ history: CustomerSearchHistory | null; error: any }>;
-  getSearchHistory: (limit?: number) => Promise<{ history: CustomerSearchHistory[]; error: any }>;
-  resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
+  sendCustomerResetCode: (email: string) => Promise<{ success: boolean; message: string }>;
+  resetCustomerPasswordWithCode: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType | undefined>(undefined);
@@ -215,9 +215,9 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
     }
   };
 
-  const resetPassword = async (email: string): Promise<{ success: boolean; message: string }> => {
+  const sendCustomerResetCode = async (email: string): Promise<{ success: boolean; message: string }> => {
     try {
-      console.log(`🔑 Resetting password for customer email: ${email}`);
+      console.log(`🔑 Generating reset code for customer email: ${email}`);
 
       // 1. Find customer by email
       const { data: customer, error: customerError } = await supabase
@@ -231,57 +231,105 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
         return { success: false, message: 'No registered customer account found with this email address.' };
       }
 
-      // 2. Generate a new password
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let newPassword = '';
-      for (let i = 0; i < 6; i++) {
-        newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      const newPasswordHash = btoa(newPassword);
+      // 2. Generate a 6-digit numeric OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiry = new Date();
+      expiry.setMinutes(expiry.getMinutes() + 15); // 15 mins expiry
 
-      // 3. Update the password hash in the database
+      // 3. Update database
       const { error: updateError } = await supabase
         .from('customers')
-        .update({ password_hash: newPasswordHash })
+        .update({
+          verification_token: otp,
+          verification_token_expires_at: expiry.toISOString()
+        })
         .eq('id', customer.id);
 
       if (updateError) {
-        console.error('Error updating customer password:', updateError);
-        return { success: false, message: 'Failed to reset password. Please try again later.' };
+        console.error('Error updating customer reset code:', updateError);
+        return { success: false, message: 'Failed to generate reset code. Please try again.' };
       }
 
-      // 4. Send email containing the new password using smtpEmailService
+      // 4. Send email containing the OTP code
       const { sendEmailWithNodemailer } = await import('@/services/smtpEmailService');
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-          <h2 style="color: #ff6b35; text-align: center;">🔑 Customer Password Reset</h2>
+          <h2 style="color: #ff6b35; text-align: center;">🔑 Password Reset Verification Code</h2>
           <p>Dear <strong>${customer.full_name}</strong>,</p>
-          <p>Your password has been reset successfully. Here are your new login credentials:</p>
-          <div style="background-color: #f9f9f9; border-left: 4px solid #ff6b35; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 16px;">
-            <strong>Email:</strong> ${customer.email}<br/>
-            <strong>New Password:</strong> ${newPassword}
+          <p>We received a request to reset your password. Use the following access code to set your new password. This code will expire in 15 minutes:</p>
+          <div style="background-color: #f9f9f9; border-left: 4px solid #ff6b35; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px; color: #ff6b35;">
+            ${otp}
           </div>
-          <p>Please log in and change your password in your profile settings as soon as possible.</p>
+          <p>If you did not request this reset, please ignore this email.</p>
           <p>Best regards,<br/>The HappyMoments Team</p>
         </div>
       `;
 
       const emailResult = await sendEmailWithNodemailer({
         to: customer.email,
-        subject: '🔑 Your HappyMoments Password Has Been Reset',
+        subject: '🔑 Your HappyMoments Password Reset Verification Code',
         html: emailHtml,
-        text: `Dear ${customer.full_name},\n\nYour password has been reset successfully. Here are your new credentials:\n\nEmail: ${customer.email}\nNew Password: ${newPassword}\n\nBest regards,\nThe HappyMoments Team`
+        text: `Dear ${customer.full_name},\n\nWe received a request to reset your password. Use the following access code to reset your password. This code will expire in 15 minutes:\n\n${otp}\n\nBest regards,\nThe HappyMoments Team`
       });
 
       if (emailResult.success) {
-        return { success: true, message: 'A new password has been sent to your registered email address.' };
+        return { success: true, message: 'A verification access code has been sent to your email.' };
       } else {
-        console.error('Failed to send password reset email:', emailResult.error);
-        return { success: false, message: 'Password reset but email sending failed. Please contact support.' };
+        console.error('Failed to send reset email:', emailResult.error);
+        return { success: false, message: 'Reset code generated but email sending failed. Please contact support.' };
       }
 
     } catch (error) {
-      console.error('Unexpected error in customer resetPassword:', error);
+      console.error('Unexpected error in sendCustomerResetCode:', error);
+      return { success: false, message: 'An unexpected error occurred. Please try again.' };
+    }
+  };
+
+  const resetCustomerPasswordWithCode = async (email: string, code: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      console.log(`🔑 Resetting password with code for customer email: ${email}`);
+
+      // 1. Find customer by email
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('id, verification_token, verification_token_expires_at')
+        .eq('email', email.trim())
+        .maybeSingle();
+
+      if (customerError || !customer) {
+        return { success: false, message: 'No registered customer account found with this email address.' };
+      }
+
+      // 2. Validate code and expiry
+      if (!customer.verification_token || customer.verification_token !== code.trim()) {
+        return { success: false, message: 'Invalid verification access code.' };
+      }
+
+      const expiry = new Date(customer.verification_token_expires_at);
+      if (new Date() > expiry) {
+        return { success: false, message: 'Verification access code has expired. Please request a new one.' };
+      }
+
+      // 3. Update the password hash and clear token
+      const newPasswordHash = btoa(newPassword);
+      const { error: updateError } = await supabase
+        .from('customers')
+        .update({
+          password_hash: newPasswordHash,
+          verification_token: null,
+          verification_token_expires_at: null
+        })
+        .eq('id', customer.id);
+
+      if (updateError) {
+        console.error('Error updating customer password:', updateError);
+        return { success: false, message: 'Failed to reset password. Please try again.' };
+      }
+
+      return { success: true, message: 'Your password has been reset successfully. You can now log in.' };
+
+    } catch (error) {
+      console.error('Unexpected error in resetCustomerPasswordWithCode:', error);
       return { success: false, message: 'An unexpected error occurred. Please try again.' };
     }
   };
@@ -655,7 +703,8 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
     deleteSearchFilter,
     saveSearchHistory,
     getSearchHistory,
-    resetPassword,
+    sendCustomerResetCode,
+    resetCustomerPasswordWithCode,
   };
 
   return (
