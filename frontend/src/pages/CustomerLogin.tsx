@@ -11,7 +11,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 const CustomerLogin: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn } = useCustomerAuth();
+  const { signIn, resetPassword } = useCustomerAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -21,6 +21,13 @@ const CustomerLogin: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -65,7 +72,12 @@ const CustomerLogin: React.FC = () => {
       );
 
       if (error) {
-        if (error.message?.includes('Invalid credentials') || error.message?.includes('No rows') || error.message?.includes('JSON object requested')) {
+        if (
+          error.message?.includes('Invalid credentials') || 
+          error.message?.includes('No rows') || 
+          error.message?.includes('JSON object requested') ||
+          error.message?.includes('Cannot coerce')
+        ) {
           setErrors({ general: 'Invalid email or password' });
         } else {
           setErrors({ general: error.message || 'An error occurred during login' });
@@ -82,75 +94,165 @@ const CustomerLogin: React.FC = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail.trim()) {
+      setResetError('Email address is required');
+      return;
+    }
+
+    setResetLoading(true);
+    setResetError('');
+    setResetMessage('');
+
+    try {
+      const result = await resetPassword(resetEmail.trim());
+      if (result.success) {
+        setResetMessage(result.message);
+        setResetEmail('');
+      } else {
+        setResetError(result.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Customer forgot password error:', error);
+      setResetError('An error occurred during password reset. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Customer Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">
+            {showForgotPassword ? 'Reset Password' : 'Customer Login'}
+          </CardTitle>
           <CardDescription className="text-center">
-            Sign in to access your saved search preferences and personalized recommendations
+            {showForgotPassword 
+              ? 'Enter your email address to receive a temporary password'
+              : 'Sign in to access your saved search preferences and personalized recommendations'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {errors.general && (
-              <Alert variant="destructive">
-                <AlertDescription>{errors.general}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Enter your email address"
-                className={errors.email ? 'border-red-500' : ''}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email}</p>
+          {showForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              {resetError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{resetError}</AlertDescription>
+                </Alert>
               )}
-            </div>
+              {resetMessage && (
+                <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                  <AlertDescription>{resetMessage}</AlertDescription>
+                </div>
+              )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email Address</Label>
                 <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  placeholder="Enter your password"
-                  className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+                  id="reset-email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Enter your registered email"
+                  disabled={resetLoading}
+                  required
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password}</p>
-              )}
-            </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing In...
-                </>
-              ) : (
-                'Sign In'
+              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={resetLoading}>
+                {resetLoading ? 'Resetting Password...' : 'Reset Password'}
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setResetError('');
+                  setResetMessage('');
+                }}
+                className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
+                disabled={resetLoading}
+              >
+                Back to Login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {errors.general && (
+                <Alert variant="destructive">
+                  <AlertDescription>{errors.general}</AlertDescription>
+                </Alert>
               )}
-            </Button>
-          </form>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="Enter your email address"
+                  className={errors.email ? 'border-red-500' : ''}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(true);
+                      setErrors({});
+                    }}
+                    className="text-xs text-blue-600 hover:underline"
+                    disabled={loading}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Enter your password"
+                    className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+            </form>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">

@@ -24,7 +24,7 @@ const LikeButton: React.FC<LikeButtonProps> = ({
   className = '',
   onLikeChange
 }) => {
-  const { customer, signIn } = useCustomerAuth();
+  const { customer, signIn, resetPassword } = useCustomerAuth();
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,6 +34,13 @@ const LikeButton: React.FC<LikeButtonProps> = ({
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const checkIfLiked = async () => {
     if (!customer || !vendorId || isChecking) return;
@@ -118,7 +125,16 @@ const LikeButton: React.FC<LikeButtonProps> = ({
     try {
       const { customer: loggedInCustomer, error } = await signIn(loginData.email.trim(), loginData.password);
       if (error) {
-        setLoginError(error.message || 'Login failed');
+        if (
+          error.message?.includes('Invalid credentials') ||
+          error.message?.includes('No rows') ||
+          error.message?.includes('JSON object requested') ||
+          error.message?.includes('Cannot coerce')
+        ) {
+          setLoginError('Invalid email or password');
+        } else {
+          setLoginError(error.message || 'Login failed');
+        }
       } else if (loggedInCustomer) {
         setShowLoginModal(false);
         // Automatically like after login
@@ -132,6 +148,31 @@ const LikeButton: React.FC<LikeButtonProps> = ({
       setLoginError('An unexpected error occurred');
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      setResetError('Email address is required');
+      return;
+    }
+    setResetLoading(true);
+    setResetError(null);
+    setResetMessage('');
+    try {
+      const result = await resetPassword(resetEmail.trim());
+      if (result.success) {
+        setResetMessage(result.message);
+        setResetEmail('');
+      } else {
+        setResetError(result.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Customer forgot password error:', error);
+      setResetError('An error occurred during password reset. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -157,43 +198,107 @@ const LikeButton: React.FC<LikeButtonProps> = ({
         {showText && <span className={`${textSize} font-medium ml-1`}>{isLiked ? 'Liked' : 'Like'}</span>}
       </button>
 
-      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
+      <Dialog open={showLoginModal} onOpenChange={(open) => {
+        setShowLoginModal(open);
+        if (!open) {
+          setShowForgotPassword(false);
+          setResetEmail('');
+          setResetMessage('');
+          setResetError(null);
+          setLoginError(null);
+        }
+      }}>
         <DialogContent className="max-w-md mx-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-xl font-bold flex items-center justify-center gap-2">
               <Lock className="h-6 w-6 text-orange-500" />
-              Login to Like Vendor
+              {showForgotPassword ? 'Reset Password' : 'Login to Like Vendor'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleLogin} className="space-y-4">
-            {loginError && <Alert variant="destructive"><AlertDescription>{loginError}</AlertDescription></Alert>}
-            <div className="space-y-2">
-              <Label htmlFor="login-email">Email</Label>
-              <Input
-                id="login-email"
-                type="email"
-                value={loginData.email}
-                onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="login-password">Password</Label>
-              <Input
-                id="login-password"
-                type="password"
-                value={loginData.password}
-                onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                required
-              />
-            </div>
-            <div className="space-y-3 pt-2">
-              <Button type="submit" disabled={loginLoading} className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                {loginLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login & Like Vendor'}
+
+          {showForgotPassword ? (
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              {resetError && <Alert variant="destructive"><AlertDescription>{resetError}</AlertDescription></Alert>}
+              {resetMessage && (
+                <div className="flex items-center gap-2 p-3 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+                  <AlertDescription>{resetMessage}</AlertDescription>
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <Label htmlFor="login-reset-email">Email Address</Label>
+                <Input
+                  id="login-reset-email"
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Enter your registered email"
+                  disabled={resetLoading}
+                  required
+                />
+              </div>
+
+              <Button type="submit" disabled={resetLoading} className="w-full bg-orange-500 hover:bg-orange-600 text-white">
+                {resetLoading ? 'Resetting Password...' : 'Reset Password'}
               </Button>
-              <Button variant="outline" onClick={() => navigate('/customer-signup')} className="w-full">Create New Account</Button>
-            </div>
-          </form>
+              
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setResetError(null);
+                  setResetMessage('');
+                }}
+                className="w-full text-center text-sm text-blue-600 hover:underline mt-1"
+                disabled={resetLoading}
+              >
+                Back to Login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-4">
+              {loginError && <Alert variant="destructive"><AlertDescription>{loginError}</AlertDescription></Alert>}
+              <div className="space-y-2">
+                <Label htmlFor="login-email">Email</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  value={loginData.email}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="login-password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(true);
+                      setLoginError(null);
+                    }}
+                    className="text-xs text-blue-600 hover:underline"
+                    disabled={loginLoading}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <Input
+                  id="login-password"
+                  type="password"
+                  value={loginData.password}
+                  onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-3 pt-2">
+                <Button type="submit" disabled={loginLoading} className="w-full bg-orange-500 hover:bg-orange-600 text-white">
+                  {loginLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login & Like Vendor'}
+                </Button>
+                <Button variant="outline" type="button" onClick={() => navigate('/customer-signup')} className="w-full">Create New Account</Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </>

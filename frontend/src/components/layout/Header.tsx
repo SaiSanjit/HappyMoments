@@ -885,12 +885,19 @@ const Header = () => {
 
 // Customer Login Modal Content Component
 const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignup: () => void }> = ({ onClose, onSwitchToSignup }) => {
-  const { signIn } = useCustomerAuth();
+  const { signIn, resetPassword } = useCustomerAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -915,7 +922,12 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
     try {
       const { customer, error } = await signIn(formData.email.trim(), formData.password);
       if (error) {
-        if (error.message?.includes('Invalid credentials') || error.message?.includes('JSON object requested')) {
+        if (
+          error.message?.includes('Invalid credentials') || 
+          error.message?.includes('No rows') || 
+          error.message?.includes('JSON object requested') ||
+          error.message?.includes('Cannot coerce')
+        ) {
           setErrors({ general: 'Invalid email or password' });
         } else {
           setErrors({ general: error.message || 'An error occurred during login' });
@@ -931,70 +943,164 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      setResetError('Email address is required');
+      return;
+    }
+    setResetLoading(true);
+    setResetError('');
+    setResetMessage('');
+    try {
+      const result = await resetPassword(resetEmail.trim());
+      if (result.success) {
+        setResetMessage(result.message);
+        setResetEmail('');
+      } else {
+        setResetError(result.message || 'Failed to reset password');
+      }
+    } catch (error) {
+      console.error('Customer forgot password error:', error);
+      setResetError('An error occurred during password reset. Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 py-4">
       <div className="text-center">
-        <p className="text-sm text-gray-600">Access your account to manage bookings and view your event history</p>
+        <p className="text-sm text-gray-600">
+          {showForgotPassword 
+            ? 'Request a new temporary password'
+            : 'Access your account to manage bookings and view your event history'}
+        </p>
       </div>
 
-      {errors.general && (
-        <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm">{errors.general}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="modal-email" className="text-sm font-medium text-gray-700">
-            Email Address
-          </label>
-          <Input
-            id="modal-email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            placeholder="Enter your email address"
-            className={errors.email ? 'border-red-500' : ''}
-          />
-          {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="modal-password" className="text-sm font-medium text-gray-700">
-            Password
-          </label>
-          <div className="relative">
-            <Input
-              id="modal-password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              placeholder="Enter your password"
-              className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-        </div>
-
-        <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing In...
-            </>
-          ) : (
-            'Sign In'
+      {showForgotPassword ? (
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          {resetError && (
+            <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{resetError}</span>
+            </div>
           )}
-        </Button>
-      </form>
+          
+          {resetMessage && (
+            <div className="flex items-center gap-2 p-2 text-green-700 bg-green-50 border border-green-200 rounded-lg">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-green-600" />
+              <span className="text-sm">{resetMessage}</span>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label htmlFor="modal-reset-email" className="text-sm font-medium text-gray-700">
+              Email Address
+            </label>
+            <Input
+              id="modal-reset-email"
+              type="email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              placeholder="Enter your registered email"
+              disabled={resetLoading}
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={resetLoading}>
+            {resetLoading ? 'Resetting Password...' : 'Reset Password'}
+          </Button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowForgotPassword(false);
+              setResetError('');
+              setResetMessage('');
+            }}
+            className="w-full text-center text-sm text-blue-600 hover:underline mt-2"
+            disabled={resetLoading}
+          >
+            Back to Login
+          </button>
+        </form>
+      ) : (
+        <>
+          {errors.general && (
+            <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{errors.general}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="modal-email" className="text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <Input
+                id="modal-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter your email address"
+                className={errors.email ? 'border-red-500' : ''}
+              />
+              {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label htmlFor="modal-password" className="text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(true);
+                    setErrors({});
+                  }}
+                  className="text-xs text-orange-500 hover:underline"
+                  disabled={loading}
+                >
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative">
+                <Input
+                  id="modal-password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Enter your password"
+                  className={errors.password ? 'border-red-500 pr-10' : 'pr-10'}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+            </div>
+
+            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing In...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </form>
+        </>
+      )}
 
       <div className="text-center">
         <p className="text-sm text-gray-600">
