@@ -88,7 +88,7 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
             .from('customers')
             .select('*')
             .eq('id', customerId)
-            .single();
+            .maybeSingle();
           
           if (data && !error) {
             setCustomer(data);
@@ -164,7 +164,7 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
         .select('*')
         .eq('email', email)
         .eq('password_hash', passwordHash)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         return { customer: null, error: error || new Error('Invalid credentials') };
@@ -411,7 +411,7 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
           .select('id')
           .eq('email', updates.email)
           .neq('id', customer.id)
-          .single();
+          .maybeSingle();
 
         if (existingCustomer) {
           return { 
@@ -493,7 +493,7 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
         .select('*')
         .eq('email_change_token', token)
         .eq('id', customer.id)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         return { success: false, message: 'Invalid or expired verification token' };
@@ -520,7 +520,7 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
         .select('id')
         .eq('email', data.new_email)
         .neq('id', customer.id)
-        .single();
+        .maybeSingle();
 
       if (existingCustomer) {
         // Clear the pending email change

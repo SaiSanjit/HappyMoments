@@ -185,7 +185,7 @@ export const verifyEmailWithToken = async (token: string): Promise<VerificationT
       .from('customers')
       .select('*')
       .eq('verification_token', token)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return {
