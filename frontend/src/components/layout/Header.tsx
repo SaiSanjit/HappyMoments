@@ -241,7 +241,6 @@ const Header = () => {
           setVendorNewPassword('');
           setVendorConfirmPassword('');
           setVendorResetMessage('');
-          setShowLoginModal(false);
         }, 3000);
       } else {
         setVendorResetError(result.message || 'Failed to reset password');
@@ -1146,7 +1145,6 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
           setNewPassword('');
           setConfirmPassword('');
           setResetMessage('');
-          onClose();
         }, 3000);
       } else {
         setResetError(result.message || 'Failed to reset password');
