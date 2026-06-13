@@ -257,7 +257,25 @@ const LikeButton: React.FC<LikeButtonProps> = ({
             </form>
           ) : (
             <form onSubmit={handleLogin} className="space-y-4">
-              {loginError && <Alert variant="destructive"><AlertDescription>{loginError}</AlertDescription></Alert>}
+              {loginError && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    <div>{loginError}</div>
+                    {(loginError.includes('Invalid') || loginError.includes('password')) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgotPassword(true);
+                          setLoginError(null);
+                        }}
+                        className="text-xs font-semibold underline mt-2 block text-left text-red-800 hover:text-red-950"
+                      >
+                        Forgot password? Reset it here
+                      </button>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="login-email">Email</Label>
                 <Input

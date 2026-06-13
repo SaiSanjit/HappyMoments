@@ -160,9 +160,25 @@ const VendorLogin: React.FC<VendorLoginProps> = ({ onClose }) => {
         ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+              <div className="p-3 text-red-700 bg-red-50 border border-red-200 rounded-lg space-y-1">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
+                </div>
+                {(error.includes('Invalid') || error.includes('password')) && (
+                  <div className="pl-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowForgotPassword(true);
+                        setError('');
+                      }}
+                      className="text-xs font-semibold underline text-blue-600 hover:text-blue-800 block text-left"
+                    >
+                      Forgot password? Reset it here
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             

@@ -753,9 +753,25 @@ const Header = () => {
                     </div>
 
                     {vendorLoginError && (
-                      <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-sm">{vendorLoginError}</span>
+                      <div className="p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg space-y-1">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm">{vendorLoginError}</span>
+                        </div>
+                        {(vendorLoginError.includes('Invalid') || vendorLoginError.includes('password')) && (
+                          <div className="pl-6">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowVendorForgotPassword(true);
+                                setVendorLoginError('');
+                              }}
+                              className="text-xs font-semibold underline text-orange-600 hover:text-orange-800 block text-left"
+                            >
+                              Forgot password? Reset it here
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1029,9 +1045,25 @@ const CustomerLoginModalContent: React.FC<{ onClose: () => void; onSwitchToSignu
       ) : (
         <>
           {errors.general && (
-            <div className="flex items-center gap-2 p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span className="text-sm">{errors.general}</span>
+            <div className="p-2 text-red-700 bg-red-50 border border-red-200 rounded-lg space-y-1">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{errors.general}</span>
+              </div>
+              {(errors.general.includes('Invalid') || errors.general.includes('password')) && (
+                <div className="pl-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForgotPassword(true);
+                      setErrors({});
+                    }}
+                    className="text-xs font-semibold underline text-orange-600 hover:text-orange-800 block text-left"
+                  >
+                    Forgot password? Reset it here
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

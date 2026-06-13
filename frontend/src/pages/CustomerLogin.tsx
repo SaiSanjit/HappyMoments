@@ -183,7 +183,21 @@ const CustomerLogin: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {errors.general && (
                 <Alert variant="destructive">
-                  <AlertDescription>{errors.general}</AlertDescription>
+                  <AlertDescription>
+                    <div>{errors.general}</div>
+                    {(errors.general.includes('Invalid') || errors.general.includes('password')) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowForgotPassword(true);
+                          setErrors({});
+                        }}
+                        className="text-xs font-semibold underline mt-2 block text-left"
+                      >
+                        Forgot password? Reset it here
+                      </button>
+                    )}
+                  </AlertDescription>
                 </Alert>
               )}
 
