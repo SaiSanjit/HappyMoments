@@ -49,6 +49,7 @@ import LikedVendors from "./pages/LikedVendors";
 import MyVendors from "./pages/MyVendors";
 import Contact from "./pages/Contact";
 import ComingSoon from "./pages/ComingSoon";
+import VendorLogin from "./components/VendorLogin";
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -104,6 +105,14 @@ const App = () => {
                 <Route 
                   path="/customer-login" 
                   element={<CustomerLogin />} 
+                />
+                <Route 
+                  path="/vendor-login" 
+                  element={
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+                      <VendorLogin />
+                    </div>
+                  } 
                 />
                 <Route 
                   path="/verify-email" 
