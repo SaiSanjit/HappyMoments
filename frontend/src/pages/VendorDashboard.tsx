@@ -1413,15 +1413,17 @@ const VendorDashboard: React.FC = () => {
                   <div className="space-y-3">
                     <Button 
                       onClick={handleEditProfile}
-                      className="flex items-center gap-2 h-20 bg-orange-500 hover:bg-orange-600 text-white shadow-lg w-full"
+                      className="flex items-center gap-4 h-24 bg-gradient-to-r from-orange-400 via-orange-500 to-amber-500 hover:from-orange-500 hover:via-orange-600 hover:to-amber-600 text-white border-0 rounded-2xl shadow-xl shadow-orange-500/20 hover:shadow-2xl hover:shadow-orange-500/40 hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-all duration-300 w-full group"
                     >
-                      <Edit className="w-6 h-6" />
+                      <div className="p-3 bg-white/20 rounded-xl group-hover:scale-110 transition-transform duration-300 flex items-center justify-center">
+                        <Edit className="w-6 h-6 text-white drop-shadow-md" />
+                      </div>
                       <div className="text-left">
-                        <div className="font-medium">Update My Details</div>
-                        <div className="text-sm opacity-90">Send for Approval</div>
+                        <div className="font-bold text-lg tracking-wide text-white drop-shadow-sm">Update My Details</div>
+                        <div className="text-xs text-white/90 font-medium">Edit information and send for approval</div>
                       </div>
                     </Button>
-                    <p className="text-sm text-gray-600 text-center">
+                    <p className="text-sm text-gray-500 text-center font-medium">
                       Update your details here
                     </p>
                   </div>
@@ -1429,16 +1431,17 @@ const VendorDashboard: React.FC = () => {
                   <div className="space-y-3">
                     <Button 
                       onClick={handleViewProfile}
-                      variant="outline"
-                      className="flex items-center gap-2 h-20 w-full"
+                      className="flex items-center gap-4 h-24 bg-gradient-to-r from-[#061D49] via-[#0D2E6C] to-[#1E458D] hover:from-[#03112E] hover:via-[#061D49] hover:to-[#12306B] text-white border-0 rounded-2xl shadow-xl shadow-blue-900/20 hover:shadow-2xl hover:shadow-blue-900/40 hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-all duration-300 w-full group"
                     >
-                      <Eye className="w-6 h-6" />
+                      <div className="p-3 bg-white/10 rounded-xl group-hover:scale-110 transition-transform duration-300 flex items-center justify-center">
+                        <Eye className="w-6 h-6 text-white drop-shadow-md" />
+                      </div>
                       <div className="text-left">
-                        <div className="font-medium">See How Customers View You</div>
-                        <div className="text-sm text-gray-600">Preview Profile (Customer View)</div>
+                        <div className="font-bold text-lg tracking-wide text-white drop-shadow-sm">See How Customers View You</div>
+                        <div className="text-xs text-white/90 font-medium">Preview your profile page live</div>
                       </div>
                     </Button>
-                    <p className="text-sm text-gray-600 text-center">
+                    <p className="text-sm text-gray-500 text-center font-medium">
                       Check your public information and make sure everything is correct.
                     </p>
                   </div>
