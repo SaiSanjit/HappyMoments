@@ -1421,6 +1421,12 @@ const VendorDashboard: React.FC = () => {
               icon: UserCheck
             },
             { 
+              id: 'invoices', 
+              label: 'INVOICES', 
+              mobileLabel: 'Invoices',
+              icon: FileText
+            },
+            { 
               id: 'leads', 
               label: 'EXTERNAL LEADS', 
               mobileLabel: 'External Leads',
@@ -1431,12 +1437,6 @@ const VendorDashboard: React.FC = () => {
               label: 'CALENDAR', 
               mobileLabel: 'Calendar',
               icon: Calendar
-            },
-            { 
-              id: 'invoices', 
-              label: 'INVOICES', 
-              mobileLabel: 'Invoices',
-              icon: FileText
             },
           ].map((tab, index) => (
                 <button
