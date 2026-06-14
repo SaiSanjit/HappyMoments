@@ -565,6 +565,12 @@ const VendorProfile = () => {
   
   const CategoryIcon = getCategoryIcon(vendorCategories);
 
+  const eventsCompletedCount = vendor.events_completed || 150;
+  const experienceText = vendor.experience || "Since 1921";
+  const locationText = vendor.address 
+    ? vendor.address.split(',').pop()?.trim() || "Hyderabad" 
+    : "Hyderabad";
+
   return (
     <>
       <style>{`
