@@ -39,6 +39,20 @@ const convertImageUrlToBase64 = (url: string): Promise<string> => {
   });
 };
 
+// Helper function to format date
+const formatDate = (dateString: any): string => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return String(dateString);
+  }
+  return date.toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
 export const generateInvoiceQuotationPDF = async (
   invoiceQuotation: InvoiceQuotation,
   vendor: any,
@@ -97,8 +111,8 @@ export const generateInvoiceQuotationPDF = async (
   };
 
   // Fetch brand logo URL from storage
-  let logoUrl = vendor.brand_logo_url || null;
-  if (!logoUrl && vendor.vendor_id) {
+  let logoUrl = vendor?.brand_logo_url || null;
+  if (!logoUrl && vendor?.vendor_id) {
     try {
       logoUrl = await getVendorBrandLogoFromStorage(vendor.vendor_id);
     } catch (e) {
@@ -117,62 +131,62 @@ export const generateInvoiceQuotationPDF = async (
 
   // Left side info (Business details)
   let leftY = margin;
-  addText(vendor.brand_name || 'Your Business Name', margin, leftY, {
+  addText(vendor?.brand_name || 'Your Business Name', margin, leftY, {
     fontSize: 20,
     fontStyle: 'bold',
     color: '#061D49'
   });
   leftY += 7.5;
 
-  const vendorCategory = Array.isArray(vendor.categories || vendor.category) 
-    ? (vendor.categories || vendor.category).join(' & ') 
-    : (vendor.category || '');
+  const vendorCategory = Array.isArray(vendor?.categories || vendor?.category) 
+    ? (vendor?.categories || vendor?.category).join(' & ') 
+    : (vendor?.category || '');
   if (vendorCategory) {
     addText(vendorCategory, margin, leftY, { fontSize: 10, fontStyle: 'bold', color: '#4a5568' });
     leftY += 5;
   }
 
-  const addressStr = vendor.address || '';
+  const addressStr = vendor?.address || '';
   const addressLines = doc.splitTextToSize(addressStr, 80);
   addressLines.slice(0, 3).forEach((line: string) => {
     addText(line, margin, leftY, { fontSize: 9, color: '#4a5568' });
     leftY += 4.2;
   });
 
-  const vendorPhone = vendor.phone_number || vendor.whatsapp_number || '';
+  const vendorPhone = vendor?.phone_number || vendor?.whatsapp_number || '';
   if (vendorPhone) {
     addText(`Phone: ${vendorPhone}`, margin, leftY, { fontSize: 9, color: '#4a5568' });
     leftY += 4.2;
   }
-  if (vendor.email) {
+  if (vendor?.email) {
     addText(`Email: ${vendor.email}`, margin, leftY, { fontSize: 9, color: '#4a5568' });
     leftY += 4.2;
   }
 
   // Right side info (Document details)
   let rightY = margin + 2;
-  addText(invoiceQuotation.type === 'invoice' ? 'INVOICE' : 'QUOTATION', pageWidth - margin, rightY, {
+  addText(invoiceQuotation?.type === 'invoice' ? 'INVOICE' : 'QUOTATION', pageWidth - margin, rightY, {
     fontSize: 22,
     fontStyle: 'bold',
     color: '#061D49',
     align: 'right'
   });
   rightY += 8.5;
-  addText(`Number: ${invoiceQuotation.number}`, pageWidth - margin, rightY, {
+  addText(`Number: ${invoiceQuotation?.number || ''}`, pageWidth - margin, rightY, {
     fontSize: 10,
     fontStyle: 'bold',
     color: '#4a5568',
     align: 'right'
   });
   rightY += 5.5;
-  addText(`Date: ${formatDate(invoiceQuotation.date)}`, pageWidth - margin, rightY, {
+  addText(`Date: ${formatDate(invoiceQuotation?.date)}`, pageWidth - margin, rightY, {
     fontSize: 9.5,
     color: '#4a5568',
     align: 'right'
   });
-  if (invoiceQuotation.type === 'invoice') {
+  if (invoiceQuotation?.type === 'invoice') {
     rightY += 5.5;
-    addText(`Due Date: ${formatDate(invoiceQuotation.date)}`, pageWidth - margin, rightY, {
+    addText(`Due Date: ${formatDate(invoiceQuotation?.date)}`, pageWidth - margin, rightY, {
       fontSize: 9.5,
       color: '#4a5568',
       align: 'right'
@@ -185,7 +199,7 @@ export const generateInvoiceQuotationPDF = async (
   yPosition += 8;
 
   // Bill To Section
-  addText(invoiceQuotation.type === 'invoice' ? 'Bill To:' : 'Quote To:', margin, yPosition, {
+  addText(invoiceQuotation?.type === 'invoice' ? 'Bill To:' : 'Quote To:', margin, yPosition, {
     fontSize: 12,
     fontStyle: 'bold',
     color: '#061D49'
@@ -193,7 +207,7 @@ export const generateInvoiceQuotationPDF = async (
   yPosition += 5;
 
   const rectStartY = yPosition;
-  const hasEmail = !!invoiceQuotation.customer_email;
+  const hasEmail = !!invoiceQuotation?.customer_email;
   const rectHeight = hasEmail ? 24 : 18;
   addRect(margin, rectStartY, contentWidth, rectHeight, '#f9fafb');
   
@@ -202,19 +216,19 @@ export const generateInvoiceQuotationPDF = async (
   doc.setLineWidth(0.3);
   doc.rect(margin, rectStartY, contentWidth, rectHeight);
   
-  addText(invoiceQuotation.customer_name, margin + 5, rectStartY + 6, {
+  addText(invoiceQuotation?.customer_name || '', margin + 5, rectStartY + 6, {
     fontSize: 10.5,
     fontStyle: 'bold',
     color: '#061D49'
   });
   
-  addText(invoiceQuotation.customer_mobile, margin + 5, rectStartY + 11.5, {
+  addText(invoiceQuotation?.customer_mobile || '', margin + 5, rectStartY + 11.5, {
     fontSize: 9.5,
     color: '#4a5568'
   });
   
   if (hasEmail) {
-    addText(invoiceQuotation.customer_email!, margin + 5, rectStartY + 17, {
+    addText(invoiceQuotation?.customer_email || '', margin + 5, rectStartY + 17, {
       fontSize: 9.5,
       color: '#4a5568'
     });
@@ -251,9 +265,11 @@ export const generateInvoiceQuotationPDF = async (
   yPosition += headerHeight;
 
   // Services Table Rows
-  invoiceQuotation.services.forEach((service, index) => {
+  const services = invoiceQuotation?.services || [];
+  services.forEach((service, index) => {
+    const desc = service?.description || '';
     const descWidth = colWidths[0] - 10; // 5mm padding on each side
-    const descLines = doc.splitTextToSize(service.description, descWidth);
+    const descLines = doc.splitTextToSize(desc, descWidth);
     const lineCount = descLines.length;
     const rowHeight = Math.max(10, 6 + (lineCount * 4.5)); // Calculate dynamic row height
     
@@ -300,9 +316,13 @@ export const generateInvoiceQuotationPDF = async (
     
     // Vertically center other columns text in the row
     const middleY = yPosition + (rowHeight / 2) + 1.5;
-    addText(service.quantity.toString(), qtyCenterX, middleY, { fontSize: 9, color: '#1a202c', align: 'center' });
-    addText(service.rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), rateX, middleY, { fontSize: 9, color: '#1a202c', align: 'right' });
-    addText(service.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), amountX, middleY, { fontSize: 9, fontStyle: 'bold', color: '#061D49', align: 'right' });
+    const qty = service?.quantity !== undefined && service?.quantity !== null ? String(service.quantity) : '0';
+    const rateVal = typeof service?.rate === 'number' ? service.rate : parseFloat(service?.rate) || 0;
+    const amountVal = typeof service?.amount === 'number' ? service.amount : parseFloat(service?.amount) || 0;
+
+    addText(qty, qtyCenterX, middleY, { fontSize: 9, color: '#1a202c', align: 'center' });
+    addText(rateVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), rateX, middleY, { fontSize: 9, color: '#1a202c', align: 'right' });
+    addText(amountVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), amountX, middleY, { fontSize: 9, fontStyle: 'bold', color: '#061D49', align: 'right' });
     
     yPosition += rowHeight;
   });
@@ -314,8 +334,8 @@ export const generateInvoiceQuotationPDF = async (
   const totalsX = pageWidth - margin - totalsWidth;
   
   // Check if totals fit on page
-  const hasDiscount = !!(invoiceQuotation.discount_rate && invoiceQuotation.discount_rate > 0);
-  const hasTax = !!(invoiceQuotation.tax_rate && invoiceQuotation.tax_rate > 0);
+  const hasDiscount = !!(invoiceQuotation?.discount_rate && invoiceQuotation.discount_rate > 0);
+  const hasTax = !!(invoiceQuotation?.tax_rate && invoiceQuotation.tax_rate > 0);
   let totalsHeight = 16;
   if (hasDiscount) totalsHeight += 5.5;
   if (hasTax) totalsHeight += 5.5;
@@ -325,20 +345,25 @@ export const generateInvoiceQuotationPDF = async (
     yPosition = margin + 10;
   }
 
+  const subtotal = typeof invoiceQuotation?.subtotal === 'number' ? invoiceQuotation.subtotal : parseFloat(invoiceQuotation?.subtotal) || 0;
+  const discountAmount = typeof invoiceQuotation?.discount_amount === 'number' ? invoiceQuotation.discount_amount : parseFloat(invoiceQuotation?.discount_amount) || 0;
+  const taxAmount = typeof invoiceQuotation?.tax_amount === 'number' ? invoiceQuotation.tax_amount : parseFloat(invoiceQuotation?.tax_amount) || 0;
+  const totalAmount = typeof invoiceQuotation?.total_amount === 'number' ? invoiceQuotation.total_amount : parseFloat(invoiceQuotation?.total_amount) || 0;
+
   addText('Subtotal:', totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#4a5568' });
-  addText(`Rs. ${invoiceQuotation.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#061D49', align: 'right' });
+  addText(`Rs. ${subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#061D49', align: 'right' });
   yPosition += 5.5;
 
   if (hasDiscount) {
-    const couponName = invoiceQuotation.coupon_name || 'VENDOR COUPON';
-    addText(`${couponName} (${invoiceQuotation.discount_rate}%):`, totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#10b981' });
-    addText(`-Rs. ${(invoiceQuotation.discount_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#10b981', align: 'right' });
+    const couponName = invoiceQuotation?.coupon_name || 'VENDOR COUPON';
+    addText(`${couponName} (${invoiceQuotation?.discount_rate}%):`, totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#10b981' });
+    addText(`-Rs. ${discountAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#10b981', align: 'right' });
     yPosition += 5.5;
   }
 
   if (hasTax) {
-    addText(`Tax (${invoiceQuotation.tax_rate}%):`, totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#4a5568' });
-    addText(`Rs. ${(invoiceQuotation.tax_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#061D49', align: 'right' });
+    addText(`Tax (${invoiceQuotation?.tax_rate}%):`, totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#4a5568' });
+    addText(`Rs. ${taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#061D49', align: 'right' });
     yPosition += 5.5;
   }
 
@@ -348,12 +373,12 @@ export const generateInvoiceQuotationPDF = async (
   yPosition += 5.5;
 
   addText('Total:', totalsX, yPosition + 3.5, { fontSize: 11, fontStyle: 'bold', color: '#061D49' });
-  addText(`Rs. ${invoiceQuotation.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 11, fontStyle: 'bold', color: '#061D49', align: 'right' });
+  addText(`Rs. ${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 11, fontStyle: 'bold', color: '#061D49', align: 'right' });
 
   yPosition += 15;
 
   // Terms & Conditions
-  if (invoiceQuotation.terms) {
+  if (invoiceQuotation?.terms) {
     // Check space for the title
     if (yPosition + 12 > pageHeight - 20) {
       doc.addPage();
@@ -427,15 +452,6 @@ export const generateInvoiceQuotationPDF = async (
   return doc.output('blob');
 };
 
-// Helper function to format date
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleDateString('en-IN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
 // Function to download PDF
 export const downloadPDF = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -456,7 +472,7 @@ export const generateAndDownloadPDF = async (
 ) => {
   try {
     const blob = await generateInvoiceQuotationPDF(invoiceQuotation, vendor, options);
-    const filename = `${invoiceQuotation.number}.pdf`;
+    const filename = `${invoiceQuotation?.number || 'document'}.pdf`;
     downloadPDF(blob, filename);
   } catch (error) {
     console.error('Error generating PDF:', error);
