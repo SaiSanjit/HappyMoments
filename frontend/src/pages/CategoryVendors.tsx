@@ -72,6 +72,7 @@ const CategoryVendors = () => {
   const [loading, setLoading] = useState(true);
   const [comparisonVendors, setComparisonVendors] = useState<Vendor[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   // Reset scroll position on page load and route change
   useEffect(() => {
@@ -466,6 +467,32 @@ const CategoryVendors = () => {
           
           {/* Compact Horizontal Filter Bar */}
           <div className="max-w-7xl mx-auto">
+            {/* Mobile Filter Bar Trigger (hidden on desktop) */}
+            <div className="block md:hidden bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/40 p-4 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder={`Search ${formatCategoryName(category || '')}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-10 border border-gray-300 focus:border-amber-400 focus:ring-1 focus:ring-amber-200 rounded-xl text-sm"
+                  />
+                </div>
+                <Button
+                  onClick={() => setIsMobileFiltersOpen(true)}
+                  variant="outline"
+                  className="h-10 px-3 border-gray-300 hover:bg-gray-50 rounded-xl flex items-center justify-center gap-1 text-gray-700 bg-white"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="text-sm font-semibold">Filters</span>
+                  {(selectedStates.length > 0 || selectedBudgetRanges.length > 0 || ratingFilter !== 'all' || sortBy !== 'rating') && (
+                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                  )}
+                </Button>
+              </div>
+            </div>
+
             {/* Premium Glassmorphism Filter Bar */}
             <div className="hidden md:block bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 p-5 hover:shadow-3xl transition-all duration-300" style={{
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2)'
@@ -972,6 +999,233 @@ const CategoryVendors = () => {
           </Button>
         </div>
       </div>
+
+      {/* Mobile Filter Drawer Overlay */}
+      {isMobileFiltersOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-gray-800" />
+              <h2 className="text-lg font-bold text-gray-800">Filters & Sort</h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileFiltersOpen(false)}
+              className="text-gray-500 hover:text-gray-800 rounded-full h-8 w-8"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Scrollable Filters Content */}
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 pb-28">
+            {/* Sort Options */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Sort By</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'rating', label: 'Top Rated' },
+                  { value: 'price-low', label: 'Price: Low to High' },
+                  { value: 'price-high', label: 'Price: High to Low' },
+                  { value: 'experience', label: 'Experience' },
+                  { value: 'reviews', label: 'Most Reviews' }
+                ].map((sortOption) => (
+                  <button
+                    key={sortOption.value}
+                    onClick={() => setSortBy(sortOption.value)}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all duration-200 text-left ${
+                      sortBy === sortOption.value
+                        ? 'border-orange-500 bg-orange-50 text-orange-600 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {sortOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Area of Service (States) */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Area of Service (States)</h3>
+              <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-xl p-3 space-y-2 bg-gray-50/50">
+                {indianStates.map((state) => {
+                  const isChecked = selectedStates.includes(state.value);
+                  return (
+                    <div
+                      key={state.value}
+                      className="flex items-center space-x-3 p-1.5 rounded-lg hover:bg-white transition-colors"
+                    >
+                      <Checkbox
+                        id={`mobile-state-${state.value}`}
+                        checked={isChecked}
+                        onCheckedChange={() => toggleState(state.value)}
+                        className="h-4.5 w-4.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <label
+                        htmlFor={`mobile-state-${state.value}`}
+                        className="text-sm text-gray-700 cursor-pointer flex-1 select-none"
+                      >
+                        {state.label}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Budget Range */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Budget Range</h3>
+              <div className="space-y-2">
+                {[
+                  { value: '10k-25k', label: '₹10,000 – ₹25,000' },
+                  { value: '25k-50k', label: '₹25,000 – ₹50,000' },
+                  { value: '50k-100k', label: '₹50,000 – ₹1,00,000' },
+                  { value: 'above-100k', label: 'Above ₹1,00,000' },
+                ].map((range) => {
+                  const isChecked = selectedBudgetRanges.includes(range.value);
+                  return (
+                    <div
+                      key={range.value}
+                      className="flex items-center space-x-3 p-1"
+                    >
+                      <Checkbox
+                        id={`mobile-budget-${range.value}`}
+                        checked={isChecked}
+                        onCheckedChange={() => toggleBudgetRange(range.value)}
+                        className="h-4.5 w-4.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <label
+                        htmlFor={`mobile-budget-${range.value}`}
+                        className="text-sm text-gray-700 cursor-pointer flex-1 select-none"
+                      >
+                        {range.label}
+                      </label>
+                    </div>
+                  );
+                })}
+
+                {/* Custom Budget */}
+                <div className="pt-2">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <Checkbox
+                      id="mobile-budget-custom"
+                      checked={selectedBudgetRanges.includes('custom')}
+                      onCheckedChange={() => {
+                        if (!selectedBudgetRanges.includes('custom')) {
+                          setSelectedBudgetRanges(prev => [...prev, 'custom']);
+                        } else {
+                          toggleBudgetRange('custom');
+                          setCustomMinBudget('');
+                          setCustomMaxBudget('');
+                        }
+                      }}
+                      className="h-4.5 w-4.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                    />
+                    <label
+                      htmlFor="mobile-budget-custom"
+                      className="text-sm font-semibold text-gray-700 cursor-pointer flex-1 select-none"
+                    >
+                      Custom Budget Range
+                    </label>
+                  </div>
+                  {selectedBudgetRanges.includes('custom') && (
+                    <div className="space-y-3 pl-7 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-2xs font-semibold text-gray-500 uppercase tracking-wider block">Min Price (₹)</label>
+                          <Input
+                            type="text"
+                            placeholder="Min"
+                            value={customMinBudget ? `₹${formatIndianNumber(customMinBudget)}` : ''}
+                            onChange={(e) => handleCustomBudgetChange('min', e.target.value)}
+                            className="text-sm rounded-lg"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-2xs font-semibold text-gray-500 uppercase tracking-wider block">Max Price (₹)</label>
+                          <Input
+                            type="text"
+                            placeholder="Max"
+                            value={customMaxBudget ? `₹${formatIndianNumber(customMaxBudget)}` : ''}
+                            onChange={(e) => handleCustomBudgetChange('max', e.target.value)}
+                            className="text-sm rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Star Rating */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Customer Rating</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'all', label: 'All Ratings' },
+                  { value: '5', label: '5 Stars' },
+                  { value: '4+', label: '4+ Stars' },
+                  { value: '3+', label: '3+ Stars' },
+                  { value: '2+', label: '2+ Stars' }
+                ].map((ratingOption) => (
+                  <button
+                    key={ratingOption.value}
+                    onClick={() => setRatingFilter(ratingOption.value)}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all duration-200 text-center ${
+                      ratingFilter === ratingOption.value
+                        ? 'border-orange-500 bg-orange-50 text-orange-600 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {ratingOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Actions Footer */}
+          <div className="absolute bottom-0 inset-x-0 bg-white border-t border-gray-100 p-4 flex gap-3 shadow-2xl z-10">
+            <Button
+              variant="outline"
+              onClick={() => {
+                clearAllFilters();
+                setIsMobileFiltersOpen(false);
+              }}
+              className="flex-1 h-12 border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-sm text-gray-600"
+            >
+              Clear All
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedBudgetRanges.includes('custom') && customMinBudget && customMaxBudget) {
+                  const min = parseInt(customMinBudget.replace(/[^\d]/g, ''));
+                  const max = parseInt(customMaxBudget.replace(/[^\d]/g, ''));
+                  if (min > max) {
+                    alert('Min budget cannot be greater than max budget');
+                    return;
+                  }
+                }
+                setIsMobileFiltersOpen(false);
+              }}
+              className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-bold text-sm shadow-md"
+            >
+              Apply Filters ({filteredAndSortedVendors.length})
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

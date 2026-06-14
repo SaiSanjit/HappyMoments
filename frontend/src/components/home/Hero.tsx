@@ -329,7 +329,7 @@ const Hero = () => {
       
       <div className="container-custom relative z-10 flex flex-col items-center h-full w-full">
         {/* Main content positioned higher up on the hero */}
-        <div className="flex flex-col items-center justify-start pt-[8vh] md:pt-[10vh] lg:pt-[12vh] pb-4 w-full px-4">
+        <div className="flex flex-col items-center justify-start pt-24 sm:pt-28 md:pt-[10vh] lg:pt-[12vh] pb-4 w-full px-4">
           <div className="max-w-4xl mx-auto text-center mb-4 md:mb-6">
             {/* Welcome message for logged-in customers */}
             {customer && customer.full_name && (

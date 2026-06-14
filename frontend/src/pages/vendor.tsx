@@ -9,7 +9,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
-import { Dialog, DialogContent, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import LikeButton from '@/components/LikeButton';
@@ -17,7 +17,7 @@ import WhatsAppButton from '@/components/WhatsAppButton';
 import VendorStatusDropdown from '@/components/VendorStatusDropdown';
 import VendorActionButtons from '@/components/VendorActionButtons';
 import { useCustomerAuth } from '@/contexts/CustomerAuthContext';
-import { checkVendorContacted } from '@/services/contactedVendorsApiService';
+import { checkVendorContacted, saveContactVendor, updateVendorStatus } from '@/services/contactedVendorsApiService';
 import { getLoggedInVendor } from '@/services/supabaseService';
 import AddReviewModal from '../components/AddReviewModal';
 
@@ -46,6 +46,171 @@ const VendorProfile = () => {
     return () => clearTimeout(checkAuth);
   }, [customer, isLoading, navigate, vendorId]);
   const [contactStatus, setContactStatus] = useState<string>('Contacted');
+  
+  // Visit scheduling modal states
+  const [showVisitModal, setShowVisitModal] = useState(false);
+  const [visitForm, setVisitForm] = useState({
+    name: '',
+    phone: '',
+    eventType: 'Wedding',
+    eventDate: '',
+    venueLocation: '',
+    visitDate: '',
+    visitTimeSlot: 'Morning (10 AM - 12 PM)',
+    notes: ''
+  });
+  const [isSubmittingVisit, setIsSubmittingVisit] = useState(false);
+  const [visitSuccess, setVisitSuccess] = useState(false);
+
+  // Instant Quote estimator states
+  const [quoteForm, setQuoteForm] = useState({
+    eventType: 'Wedding',
+    guestCount: '100-200',
+    budgetRange: 'Mid-range',
+    eventDate: '',
+    location: ''
+  });
+  const [quoteEstimate, setQuoteEstimate] = useState<{ min: number; max: number } | null>(null);
+  const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
+  const [quoteSuccess, setQuoteSuccess] = useState(false);
+
+  // Prefill visit form when customer data is available
+  useEffect(() => {
+    if (customer) {
+      setVisitForm(prev => ({
+        ...prev,
+        name: customer.full_name || '',
+        phone: customer.mobile_number || ''
+      }));
+    }
+  }, [customer]);
+
+  // Cost estimation logic based on starting price, guest count, and service tier/budget range
+  const calculateEstimate = useCallback(() => {
+    const basePrice = vendor?.starting_price || 25000;
+    
+    let guestMultiplier = 1.0;
+    switch (quoteForm.guestCount) {
+      case '<100': guestMultiplier = 0.8; break;
+      case '100-200': guestMultiplier = 1.0; break;
+      case '200-500': guestMultiplier = 1.4; break;
+      case '>500': guestMultiplier = 1.8; break;
+    }
+
+    let budgetMultiplier = 1.0;
+    switch (quoteForm.budgetRange) {
+      case 'Economy': budgetMultiplier = 0.7; break;
+      case 'Mid-range': budgetMultiplier = 1.0; break;
+      case 'Premium': budgetMultiplier = 1.4; break;
+      case 'Luxury': budgetMultiplier = 2.0; break;
+    }
+
+    const calculatedBase = basePrice * guestMultiplier * budgetMultiplier;
+    const minEstimate = Math.round((calculatedBase * 0.9) / 500) * 500;
+    const maxEstimate = Math.round((calculatedBase * 1.15) / 500) * 500;
+
+    setQuoteEstimate({
+      min: minEstimate,
+      max: maxEstimate
+    });
+  }, [vendor?.starting_price, quoteForm.guestCount, quoteForm.budgetRange]);
+
+  useEffect(() => {
+    calculateEstimate();
+  }, [calculateEstimate]);
+
+  const handleScheduleVisitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) {
+      navigate(`/customer-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    setIsSubmittingVisit(true);
+    try {
+      await saveContactVendor(customer.id, vendorId || '');
+      
+      const serializedNotes = `Schedule Visit Request:
+- Customer Name: ${visitForm.name}
+- Phone: ${visitForm.phone}
+- Event Type: ${visitForm.eventType}
+- Event Date: ${visitForm.eventDate || 'Not specified'}
+- Venue Location: ${visitForm.venueLocation || 'Not specified'}
+- Preferred Visit Date: ${visitForm.visitDate}
+- Preferred Time Slot: ${visitForm.visitTimeSlot}
+- Additional Notes: ${visitForm.notes || 'None'}`;
+
+      const response = await updateVendorStatus(
+        customer.id,
+        vendorId || '',
+        'Event Scheduled',
+        serializedNotes,
+        'customer'
+      );
+
+      if (response.success) {
+        setVisitSuccess(true);
+        setIsContacted(true);
+        setContactStatus('Event Scheduled');
+        window.dispatchEvent(new CustomEvent('vendorStatusUpdated', { 
+          detail: { vendorId, status: 'Event Scheduled' } 
+        }));
+      } else {
+        alert(response.error || 'Failed to submit visit request. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error submitting visit request:', err);
+      alert('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmittingVisit(false);
+    }
+  };
+
+  const handleRequestQuoteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) {
+      navigate(`/customer-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
+    setIsSubmittingQuote(true);
+    try {
+      await saveContactVendor(customer.id, vendorId || '');
+      
+      const serializedNotes = `Instant Quote Estimate Requested:
+- Event Type: ${quoteForm.eventType}
+- Guest Count: ${quoteForm.guestCount}
+- Budget Range/Class: ${quoteForm.budgetRange}
+- Event Date: ${quoteForm.eventDate || 'Not specified'}
+- Location: ${quoteForm.location || 'Not specified'}
+- Calculated Estimate: ₹${quoteEstimate?.min.toLocaleString()} - ₹${quoteEstimate?.max.toLocaleString()}`;
+
+      const response = await updateVendorStatus(
+        customer.id,
+        vendorId || '',
+        'Discussion in Progress',
+        serializedNotes,
+        'customer'
+      );
+
+      if (response.success) {
+        setQuoteSuccess(true);
+        setIsContacted(true);
+        setContactStatus('Discussion in Progress');
+        window.dispatchEvent(new CustomEvent('vendorStatusUpdated', { 
+          detail: { vendorId, status: 'Discussion in Progress' } 
+        }));
+      } else {
+        alert(response.error || 'Failed to request quote. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error requesting quote:', err);
+      alert('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmittingQuote(false);
+    }
+  };
+
   const [isContacted, setIsContacted] = useState(false);
   const [highlightImages, setHighlightImages] = useState<any[]>([]);
   const [catalogImages, setCatalogImages] = useState<any[]>([]);
@@ -540,57 +705,60 @@ const VendorProfile = () => {
                 </div>
               )}
 
-                {/* Call Button */}
-                <Button
-                  onClick={() => {
-                    if (vendor?.phone_number) {
-                      window.location.href = `tel:${vendor.phone_number}`;
-                    }
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full justify-start bg-blue-500 hover:bg-blue-600 text-white h-11"
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call Vendor
-                </Button>
-
-                {/* Visit Button */}
-                <Button
-                  onClick={() => {
-                    // Handle visit action
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full justify-start bg-purple-500 hover:bg-purple-600 text-white h-11"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Schedule Visit
-                </Button>
-
-                {/* Share Button */}
-                <Button
-                  onClick={async () => {
-                    if (navigator.share) {
-                      try {
-                        await navigator.share({
-                          title: vendor.brand_name,
-                          text: `Check out ${vendor.brand_name} on Happy Moments`,
-                          url: window.location.href,
-                        });
-                      } catch (err) {
-                        console.log('Error sharing:', err);
+                {/* Action Buttons Row */}
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  {/* Call Button */}
+                  <Button
+                    onClick={() => {
+                      if (vendor?.phone_number) {
+                        window.location.href = `tel:${vendor.phone_number}`;
                       }
-                    } else {
-                      // Fallback: Copy to clipboard
-                      navigator.clipboard.writeText(window.location.href);
-                    }
-                    setMobileMenuOpen(false);
-                  }}
-                  variant="outline"
-                  className="w-full justify-start h-11 border-gray-300"
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share Profile
-                </Button>
+                      setMobileMenuOpen(false);
+                    }}
+                    className="bg-blue-500 hover:bg-blue-600 text-white h-11 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 px-2"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Call</span>
+                  </Button>
+
+                  {/* Visit Button */}
+                  <Button
+                    onClick={() => {
+                      // Handle visit action
+                      setMobileMenuOpen(false);
+                    }}
+                    className="bg-purple-500 hover:bg-purple-600 text-white h-11 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 px-2"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Schedule</span>
+                  </Button>
+
+                  {/* Share Button */}
+                  <Button
+                    onClick={async () => {
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: vendor.brand_name,
+                            text: `Check out ${vendor.brand_name} on Happy Moments`,
+                            url: window.location.href,
+                          });
+                        } catch (err) {
+                          console.log('Error sharing:', err);
+                        }
+                      } else {
+                        // Fallback: Copy to clipboard
+                        navigator.clipboard.writeText(window.location.href);
+                      }
+                      setMobileMenuOpen(false);
+                    }}
+                    variant="outline"
+                    className="border-gray-300 hover:bg-gray-50 h-11 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 px-2 text-gray-700 bg-white"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Share</span>
+                  </Button>
+                </div>
             </div>
           </div>
           )}
@@ -666,74 +834,114 @@ const VendorProfile = () => {
         {/* Mobile-First Simple Layout */}
         <div className="block lg:hidden">
           <div className="container mx-auto px-4 py-2">
-            {/* Mobile Hero Card - Trust First, Conversion Focused */}
+            {/* Mobile Hero Card - Redesigned with Trust & 4 CTA Grid */}
             <div className="bg-white rounded-2xl p-5 shadow-xl border border-orange-200 mb-4">
               {/* Vendor Name */}
-              <h1 className="text-2xl font-bold text-gray-900 mb-3 text-center">{vendor.brand_name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">{vendor.brand_name}</h1>
               
               {/* One-line Value Statement */}
               <div className="text-center mb-3">
-                <p className="text-sm text-gray-700 font-medium">
-                  {vendor.experience || "10+ Years"} Experience | {vendorCategories.length > 0 ? vendorCategories.slice(0, 2).join(' & ') : 'Professional Services'} | {vendor.additional_info?.service_areas && vendor.additional_info.service_areas.length > 0 ? vendor.additional_info.service_areas[0] : (vendor.address ? vendor.address.split(',')[vendor.address.split(',').length - 1]?.trim() : '')}
+                <p className="text-xs text-gray-500 font-medium">
+                  {vendorCategories.length > 0 ? vendorCategories.slice(0, 2).join(' & ') : 'Professional Services'} | {vendor.address ? vendor.address.split(',').pop()?.trim() : 'Hyderabad'}
                 </p>
-                    </div>
-                
+              </div>
+
               {/* Category Chips */}
               <div className="flex justify-center gap-2 flex-wrap mb-4">
-                  {vendorCategories.length > 0 && (
-                    <>
-                    {vendorCategories.slice(0, 3).map((cat, idx) => (
-                      <Badge key={idx} className="px-3 py-1 text-xs bg-wedding-orange text-white rounded-full font-medium">
-                          <CategoryIcon className="w-3 h-3 mr-1" />
-                          {cat}
-                        </Badge>
-                      ))}
-                    {vendorCategories.length > 3 && (
-                      <Badge className="px-3 py-1 text-xs bg-purple-500 text-white rounded-full font-medium">
-                        +{vendorCategories.length - 3} more
-                        </Badge>
-                      )}
-                    </>
-                  )}
-                  {vendorCategories.length === 0 && (
-                  <Badge className="px-3 py-1 text-xs bg-gray-500 text-white rounded-full font-medium">
-                      <CategoryIcon className="w-3 h-3 mr-1" />
-                      Service Provider
-                    </Badge>
-                  )}
-                </div>
-
-              {/* Trust Info - Rating + Experience */}
-              <div className="flex items-center justify-center gap-4 mb-4 pb-4 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-amber-500 fill-current" />
-                  <span className="font-bold text-gray-900">{rating}</span>
-                </div>
-                <div className="h-4 w-px bg-gray-300"></div>
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-gray-700">{vendor.experience || "10+ Years"}</span>
-                  </div>
-                {vendor.events_completed && vendor.events_completed > 0 && (
+                {vendorCategories.length > 0 && (
                   <>
-                    <div className="h-4 w-px bg-gray-300"></div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="font-semibold text-gray-700">{vendor.events_completed}+ Events</span>
-                </div>
+                    {vendorCategories.slice(0, 2).map((cat, idx) => (
+                      <Badge key={idx} className="px-2 py-0.5 text-[10px] bg-wedding-orange text-white rounded-full font-medium">
+                        <CategoryIcon className="w-2.5 h-2.5 mr-1" />
+                        {cat}
+                      </Badge>
+                    ))}
+                    {vendorCategories.length > 2 && (
+                      <Badge className="px-2 py-0.5 text-[10px] bg-purple-500 text-white rounded-full font-medium">
+                        +{vendorCategories.length - 2} more
+                      </Badge>
+                    )}
                   </>
                 )}
               </div>
 
-              {/* ONE Primary CTA Only */}
-              {vendor && (
-                <WhatsAppButton
-                  vendor={vendor}
-                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-4 text-base font-bold rounded-xl shadow-lg transition-all"
+              {/* Redesigned Mobile Trust Section */}
+              <div className="grid grid-cols-2 gap-2 mb-4 bg-slate-50/80 p-3 rounded-xl border border-slate-100 text-[11px]">
+                <div className="flex items-center gap-1.5 font-semibold text-gray-700">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
+                  <span>{rating} Rating</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold text-green-700">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600 fill-green-50" />
+                  <span>Verified Vendor</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold text-orange-600">
+                  <Zap className="w-3.5 h-3.5 text-orange-500 fill-orange-50" />
+                  <span>Responds in 15m</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold text-purple-700">
+                  <span>🎉</span>
+                  <span>{vendor.events_completed || 150}+ Events</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold text-blue-700">
+                  <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{vendor.address ? vendor.address.split(',').pop()?.trim() || 'Hyderabad' : 'Hyderabad'}</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-semibold text-amber-700">
+                  <Trophy className="w-3.5 h-3.5 text-amber-600" />
+                  <span>{vendor.experience || 'Since 1921'}</span>
+                </div>
+              </div>
+
+              {/* 4 Action Buttons Above the Fold on Mobile */}
+              <div className="space-y-2.5">
+                {/* Primary CTA: Get Quote */}
+                <Button
+                  onClick={() => {
+                    const quoteEl = document.getElementById('instant-quote-section');
+                    if (quoteEl) {
+                      quoteEl.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-5 text-sm font-extrabold rounded-xl shadow-md flex items-center justify-center gap-2"
                 >
-                  Chat to Book Now
-                </WhatsAppButton>
-              )}
+                  <Sparkles className="w-4 h-4" />
+                  Get Quote (Primary CTA)
+                </Button>
+
+                {/* Grid for Schedule, WhatsApp, Call */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    onClick={() => setShowVisitModal(true)}
+                    className="bg-purple-600 hover:bg-purple-700 text-white h-11 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 px-1 transition-all active:scale-95"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Schedule Visit
+                  </Button>
+
+                  {vendor && (
+                    <WhatsAppButton
+                      vendor={vendor}
+                      className="bg-green-500 hover:bg-green-600 text-white h-11 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 px-1 transition-all active:scale-95"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      WhatsApp
+                    </WhatsAppButton>
+                  )}
+
+                  <Button
+                    onClick={() => {
+                      if (vendor?.phone_number) {
+                        window.location.href = `tel:${vendor.phone_number}`;
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl text-[10px] font-bold flex flex-col items-center justify-center gap-1 px-1 transition-all active:scale-95"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    Call Vendor
+                  </Button>
+                </div>
+              </div>
 
               {/* Status Management - Show only if customer has contacted this vendor */}
               {customer && isContacted && vendorId && (
@@ -757,6 +965,138 @@ const VendorProfile = () => {
                 </Card>
               )}
             </div>
+
+            {/* Mobile Instant Quote Card */}
+            <Card id="instant-quote-section" className="mb-4 overflow-hidden bg-gradient-to-br from-amber-50/90 via-white to-orange-50/90 rounded-2xl border-2 border-orange-200/60 shadow-xl">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-orange-500 animate-pulse" />
+                  <h2 className="text-base font-black text-gray-900">Get Instant Quote</h2>
+                </div>
+                <p className="text-[11px] text-gray-505 text-gray-500 mb-3">
+                  Select your choices to generate a customized price range estimate.
+                </p>
+
+                {quoteSuccess ? (
+                  <div className="text-center py-5 bg-white/70 backdrop-blur-sm rounded-xl border border-green-200 p-4 space-y-2">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle className="w-6 h-6 text-green-600" />
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-900">Quote Request Submitted</h3>
+                    <p className="text-[11px] text-gray-600 leading-normal">
+                      We have sent your details along with your custom estimate of ₹{quoteEstimate?.min.toLocaleString()} - ₹{quoteEstimate?.max.toLocaleString()} to {vendor.brand_name}.
+                    </p>
+                    <Button 
+                      onClick={() => setQuoteSuccess(false)}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-300 hover:bg-green-50 text-green-700 rounded-lg text-xs"
+                    >
+                      Calculate New Quote
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleRequestQuoteSubmit} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Event Type</label>
+                        <select
+                          value={quoteForm.eventType}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, eventType: e.target.value }))}
+                          className="w-full border border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-lg p-1.5 text-xs bg-white"
+                        >
+                          <option value="Wedding">Wedding</option>
+                          <option value="Reception">Reception</option>
+                          <option value="Birthday">Birthday</option>
+                          <option value="Corporate">Corporate</option>
+                          <option value="Engagement">Engagement</option>
+                          <option value="Pre-Wedding">Pre-Wedding</option>
+                          <option value="Others">Others</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Guests</label>
+                        <select
+                          value={quoteForm.guestCount}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, guestCount: e.target.value }))}
+                          className="w-full border border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-lg p-1.5 text-xs bg-white"
+                        >
+                          <option value="<100">&lt; 100 Guests</option>
+                          <option value="100-200">100-200 Guests</option>
+                          <option value="200-500">200-500 Guests</option>
+                          <option value=">500">&gt; 500 Guests</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Service Class</label>
+                        <select
+                          value={quoteForm.budgetRange}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, budgetRange: e.target.value }))}
+                          className="w-full border border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-lg p-1.5 text-xs bg-white"
+                        >
+                          <option value="Economy">Economy</option>
+                          <option value="Mid-range">Standard</option>
+                          <option value="Premium">Premium</option>
+                          <option value="Luxury">Luxury</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Date</label>
+                        <Input
+                          type="date"
+                          required
+                          value={quoteForm.eventDate}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, eventDate: e.target.value }))}
+                          className="w-full border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-lg p-1.5 text-xs h-[30px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-600 mb-0.5">Venue Location</label>
+                      <Input
+                        type="text"
+                        required
+                        value={quoteForm.location}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, location: e.target.value }))}
+                        placeholder="e.g. Madhapur, Hyd"
+                        className="w-full border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-lg p-1.5 text-xs h-[30px]"
+                      />
+                    </div>
+
+                    {quoteEstimate && (
+                      <div className="bg-white/90 rounded-xl p-2.5 border border-orange-200 text-center my-2 shadow-inner">
+                        <p className="text-[9px] uppercase font-bold tracking-wider text-orange-600">Price Estimate Range</p>
+                        <p className="text-lg font-black text-amber-600 mt-0.5">
+                          ₹{quoteEstimate.min.toLocaleString()} - ₹{quoteEstimate.max.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={isSubmittingQuote}
+                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-1.5"
+                    >
+                      {isSubmittingQuote ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Sending Request...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-3.5 h-3.5" />
+                          Request Detailed Quote
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
 
             {/* GALLERY SECTION - Always Visible in Mobile View */}
             <Card className="mb-4 overflow-hidden hover:shadow-xl transition-all duration-300 border-2 border-gray-100">
@@ -1394,6 +1734,34 @@ const VendorProfile = () => {
                       )}
                     </div>
 
+                    {/* Redesigned Desktop Hero trust indications */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8 bg-gradient-to-br from-slate-50 to-amber-50/20 p-5 rounded-2xl border border-slate-100 shadow-sm text-sm">
+                      <div className="flex items-center gap-2 font-semibold text-gray-700">
+                        <span className="text-amber-500 text-base">⭐⭐⭐⭐⭐</span>
+                        <span>{rating} Rating</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-semibold text-green-700">
+                        <CheckCircle className="w-4 h-4 text-green-600 fill-green-50" />
+                        <span>Verified Vendor</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-semibold text-orange-600">
+                        <Zap className="w-4 h-4 text-orange-500 fill-orange-50" />
+                        <span>Responds in 15m</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-semibold text-purple-700">
+                        <span>🎉</span>
+                        <span>{vendor.events_completed || 150}+ Completed Events</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-semibold text-blue-700">
+                        <MapPin className="w-4 h-4 text-blue-500" />
+                        <span>{locationText}</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-semibold text-amber-700">
+                        <Trophy className="w-4 h-4 text-amber-600" />
+                        <span>{experienceText}</span>
+                      </div>
+                    </div>
+
                     {/* Tagline */}
                     <p className="text-4xl lg:text-5xl font-bold text-gray-800 mb-8 leading-relaxed relative">
                       <span className="relative z-10">{vendor.quick_intro || vendor.description || "Professional services for your special day"}</span>
@@ -1430,7 +1798,7 @@ const VendorProfile = () => {
                           <MapPin className="w-10 h-10 text-amber-700" />
                         </div>
                         )}
-              <div>
+                        <div>
                           <span className="font-bold text-2xl text-gray-800">Location</span>
                           <p className="text-lg text-gray-600">
                             {vendor.additional_info?.service_areas && vendor.additional_info.service_areas.length > 0 
@@ -1448,14 +1816,14 @@ const VendorProfile = () => {
                               View on Google Maps
                             </a>
                           )}
-                </div>
-              </div>
+                        </div>
+                      </div>
 
                       <div className="flex items-center gap-6 text-gray-700 p-8 bg-gradient-to-r from-red-50/70 to-pink-50/70 rounded-3xl border-2 border-red-200/60 shadow-xl hover:shadow-2xl transition-all duration-300">
                         <div className="w-20 h-20 bg-gradient-to-r from-red-100 to-pink-100 rounded-full flex items-center justify-center border-2 border-red-300 shadow-lg">
                           <Trophy className="w-10 h-10 text-red-700" />
                         </div>
-              <div>
+                        <div>
                           <span className="font-bold text-2xl text-gray-800">{vendor.experience || "Experience"}</span>
                           <p className="text-lg text-gray-600">
                             {vendor.events_completed !== undefined && vendor.events_completed > 0 
@@ -1464,22 +1832,54 @@ const VendorProfile = () => {
                             }
                           </p>
                         </div>
-              </div>
+                      </div>
 
-              </div>
+                    </div>
 
-                    {/* CTA Button */}
-                    <div className="mt-8">
+                    {/* Redesigned Desktop Action Buttons above the fold */}
+                    <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Button
+                        onClick={() => {
+                          const quoteEl = document.getElementById('instant-quote-section-desktop');
+                          if (quoteEl) {
+                            quoteEl.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }}
+                        className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-6 text-sm font-extrabold rounded-xl shadow-lg hover:shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Get Quote (Primary)
+                      </Button>
+
+                      <Button
+                        onClick={() => setShowVisitModal(true)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white py-6 text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Schedule Visit
+                      </Button>
+
                       {vendor && (
                         <WhatsAppButton
                           vendor={vendor}
-                          size="lg"
-                          className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 active:from-green-700 active:to-emerald-800 text-white px-12 py-10 text-3xl font-black shadow-2xl hover:scale-105 hover:shadow-green-500/50 active:scale-95 transition-all duration-300 rounded-3xl border-2 border-green-400/30 hover:border-green-300/50 relative overflow-hidden group"
+                          className="bg-green-500 hover:bg-green-600 text-white py-6 text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
-                          <div className="absolute inset-0 bg-white/20 scale-0 group-active:scale-100 transition-transform duration-200 rounded-3xl"></div>
-                          <span className="relative z-10">Chat to Book Now</span>
+                          <MessageCircle className="w-4 h-4" />
+                          WhatsApp Vendor
                         </WhatsAppButton>
                       )}
+
+                      <Button
+                        onClick={() => {
+                          if (vendor?.phone_number) {
+                            window.location.href = `tel:${vendor.phone_number}`;
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white py-6 text-sm font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        <Phone className="w-4 h-4" />
+                        Call Vendor
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1987,6 +2387,139 @@ const VendorProfile = () => {
 
           {/* Right Column - Sidebar */}
           <div className="hidden lg:block space-y-8">
+            {/* Desktop Instant Quote Widget in Sidebar */}
+            <Card id="instant-quote-section-desktop" className="overflow-hidden bg-gradient-to-br from-amber-50/90 via-white to-orange-50/90 rounded-2xl border-2 border-orange-200/60 shadow-xl">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5 text-orange-500 animate-pulse" />
+                  <h2 className="text-lg font-black text-gray-900">Get Instant Quote Estimate</h2>
+                </div>
+                <p className="text-xs text-gray-600 mb-4 leading-normal">
+                  Customize the parameters below to see an instant projected price range based on the vendor's base rates.
+                </p>
+
+                {quoteSuccess ? (
+                  <div className="text-center py-6 bg-white/80 backdrop-blur-sm rounded-xl border border-green-200 p-4 space-y-3">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto shadow-sm">
+                      <CheckCircle className="w-7 h-7 text-green-600" />
+                    </div>
+                    <h3 className="text-base font-bold text-gray-950">Quote Request Submitted</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">
+                      Your preferences and estimated range of ₹{quoteEstimate?.min.toLocaleString()} - ₹{quoteEstimate?.max.toLocaleString()} have been registered and sent directly to {vendor.brand_name}.
+                    </p>
+                    <Button 
+                      onClick={() => setQuoteSuccess(false)}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-300 hover:bg-green-50 text-green-700 rounded-lg text-xs"
+                    >
+                      Calculate Another Estimate
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleRequestQuoteSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Event Type</label>
+                      <select
+                        value={quoteForm.eventType}
+                        onChange={(e) => setQuoteForm(prev => ({ ...prev, eventType: e.target.value }))}
+                        className="w-full border border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl p-2.5 text-sm bg-white"
+                      >
+                        <option value="Wedding">Wedding</option>
+                        <option value="Reception">Reception</option>
+                        <option value="Birthday">Birthday</option>
+                        <option value="Corporate">Corporate</option>
+                        <option value="Engagement">Engagement</option>
+                        <option value="Pre-Wedding">Pre-Wedding</option>
+                        <option value="Others">Others</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Guest Count</label>
+                        <select
+                          value={quoteForm.guestCount}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, guestCount: e.target.value }))}
+                          className="w-full border border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl p-2.5 text-sm bg-white"
+                        >
+                          <option value="<100">&lt; 100 Guests</option>
+                          <option value="100-200">100 - 200 Guests</option>
+                          <option value="200-500">200 - 500 Guests</option>
+                          <option value=">500">&gt; 500 Guests</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Service Tier</label>
+                        <select
+                          value={quoteForm.budgetRange}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, budgetRange: e.target.value }))}
+                          className="w-full border border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl p-2.5 text-sm bg-white"
+                        >
+                          <option value="Economy">Economy</option>
+                          <option value="Mid-range">Standard</option>
+                          <option value="Premium">Premium</option>
+                          <option value="Luxury">Luxury</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Event Date</label>
+                        <Input
+                          type="date"
+                          required
+                          value={quoteForm.eventDate}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, eventDate: e.target.value }))}
+                          className="w-full border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl text-sm h-[40px]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Venue Area</label>
+                        <Input
+                          type="text"
+                          required
+                          value={quoteForm.location}
+                          onChange={(e) => setQuoteForm(prev => ({ ...prev, location: e.target.value }))}
+                          placeholder="e.g. Madhapur"
+                          className="w-full border-gray-200 focus:border-orange-500 focus:ring-orange-500 rounded-xl text-sm h-[40px]"
+                        />
+                      </div>
+                    </div>
+
+                    {quoteEstimate && (
+                      <div className="bg-white/95 rounded-2xl p-4 border border-orange-200 text-center my-4 shadow-sm">
+                        <p className="text-xs uppercase font-extrabold tracking-wider text-orange-600">Calculated Cost Estimate</p>
+                        <p className="text-2xl font-black text-amber-600 mt-1">
+                          ₹{quoteEstimate.min.toLocaleString()} - ₹{quoteEstimate.max.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">Estimates are directional and subject to specific custom additions.</p>
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={isSubmittingQuote}
+                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-sm py-4 rounded-xl shadow-lg hover:shadow-orange-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                    >
+                      {isSubmittingQuote ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Submitting Quote Request...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-5 h-5" />
+                          Request Detailed Quote
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Quick Contact Card - Enhanced for Maximum Conversions */}
             <Card className="sticky top-4 bg-white/95 backdrop-blur-md border-2 border-white/30 shadow-2xl relative overflow-hidden">
               {/* Confetti Effect */}
@@ -2350,6 +2883,157 @@ const VendorProfile = () => {
           onReviewSubmitted={refreshVendorData}
         />
       )}
+
+      {/* Schedule Visit Modal */}
+      <Dialog open={showVisitModal} onOpenChange={setShowVisitModal}>
+        <DialogContent className="sm:max-w-[500px] bg-white rounded-2xl p-6 shadow-2xl border border-purple-100 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-bold text-purple-900 flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-purple-600" />
+              Schedule a Visit
+            </DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Book an in-person or virtual consultation with {vendor.brand_name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          {visitSuccess ? (
+            <div className="text-center py-8 space-y-4">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle className="w-10 h-10 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">Visit Scheduled!</h3>
+              <p className="text-gray-600">
+                Your request has been successfully recorded. {vendor.brand_name} will get in touch with you shortly to confirm the slot.
+              </p>
+              <Button 
+                onClick={() => {
+                  setShowVisitModal(false);
+                  setVisitSuccess(false);
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 rounded-xl"
+              >
+                Close
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleScheduleVisitSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Your Name</label>
+                <Input
+                  type="text"
+                  required
+                  value={visitForm.name}
+                  onChange={(e) => setVisitForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                  placeholder="Enter your name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Phone Number</label>
+                <Input
+                  type="tel"
+                  required
+                  value={visitForm.phone}
+                  onChange={(e) => setVisitForm(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                  placeholder="Enter mobile number"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Event Type</label>
+                  <select
+                    value={visitForm.eventType}
+                    onChange={(e) => setVisitForm(prev => ({ ...prev, eventType: e.target.value }))}
+                    className="w-full border border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl p-2.5 text-sm bg-white"
+                  >
+                    <option value="Wedding">Wedding</option>
+                    <option value="Reception">Reception</option>
+                    <option value="Birthday">Birthday</option>
+                    <option value="Corporate">Corporate</option>
+                    <option value="Engagement">Engagement</option>
+                    <option value="Pre-Wedding">Pre-Wedding</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Event Date</label>
+                  <Input
+                    type="date"
+                    value={visitForm.eventDate}
+                    onChange={(e) => setVisitForm(prev => ({ ...prev, eventDate: e.target.value }))}
+                    className="w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Venue Location</label>
+                <Input
+                  type="text"
+                  value={visitForm.venueLocation}
+                  onChange={(e) => setVisitForm(prev => ({ ...prev, venueLocation: e.target.value }))}
+                  placeholder="e.g. Gachibowli, Hyderabad"
+                  className="w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Preferred Visit Date</label>
+                  <Input
+                    type="date"
+                    required
+                    value={visitForm.visitDate}
+                    onChange={(e) => setVisitForm(prev => ({ ...prev, visitDate: e.target.value }))}
+                    className="w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Preferred Slot</label>
+                  <select
+                    value={visitForm.visitTimeSlot}
+                    onChange={(e) => setVisitForm(prev => ({ ...prev, visitTimeSlot: e.target.value }))}
+                    className="w-full border border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl p-2.5 text-sm bg-white"
+                  >
+                    <option value="Morning (10 AM - 12 PM)">Morning (10 AM - 12 PM)</option>
+                    <option value="Afternoon (12 PM - 4 PM)">Afternoon (12 PM - 4 PM)</option>
+                    <option value="Evening (4 PM - 8 PM)">Evening (4 PM - 8 PM)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Notes / Special Instructions</label>
+                <Textarea
+                  value={visitForm.notes}
+                  onChange={(e) => setVisitForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Share any details about your event or what you are looking for..."
+                  className="w-full border-gray-200 focus:border-purple-500 focus:ring-purple-500 rounded-xl min-h-[80px]"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmittingVisit}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-purple-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                {isSubmittingVisit ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Scheduling Visit...
+                  </>
+                ) : (
+                  'Schedule Visit'
+                )}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
     </>

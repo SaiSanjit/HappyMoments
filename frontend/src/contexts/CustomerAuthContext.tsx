@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { createUnverifiedUser, createVerifiedUser, verifyEmailWithToken, resendVerificationEmail as resendVerificationEmailService, generateVerificationToken } from '@/services/emailVerificationService';
+import { getLikedVendors } from '@/services/likedVendorsApiService';
 
 export interface Customer {
   id: number;  // Changed from string to number for auto-increment integer
@@ -45,6 +46,7 @@ export interface CustomerSearchHistory {
 interface CustomerAuthContextType {
   customer: Customer | null;
   loading: boolean;
+  likedVendorIds: string[];
   signUp: (fullName: string, email: string, password: string, gender?: string, mobileNumber: string, isEmailPreVerified?: boolean) => Promise<{ customer: Customer | null; error: any; message?: string }>;
   signIn: (email: string, password: string) => Promise<{ customer: Customer | null; error: any }>;
   signOut: () => Promise<{ error: any }>;
@@ -78,6 +80,60 @@ interface CustomerAuthProviderProps {
 export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ children }) => {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState(true);
+  const [likedVendorIds, setLikedVendorIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchLikedVendorIds = async () => {
+      if (customer) {
+        try {
+          const result = await getLikedVendors(customer.id);
+          if (result.success) {
+            let ids: string[] = [];
+            if (result.liked_vendor_ids) {
+              ids = result.liked_vendor_ids;
+            } else if (result.data) {
+              ids = result.data.map((v: any) => String(v.vendor_id || v.id));
+            }
+            setLikedVendorIds(ids);
+          }
+        } catch (error) {
+          console.error('Error fetching liked vendors in context:', error);
+        }
+      } else {
+        setLikedVendorIds([]);
+      }
+    };
+
+    fetchLikedVendorIds();
+  }, [customer?.id]);
+
+  useEffect(() => {
+    const handleLiked = (e: CustomEvent) => {
+      const vId = String(e.detail?.vendorId || '').trim();
+      if (vId) {
+        setLikedVendorIds(prev => {
+          if (!prev.includes(vId)) {
+            return [...prev, vId];
+          }
+          return prev;
+        });
+      }
+    };
+
+    const handleUnliked = (e: CustomEvent) => {
+      const vId = String(e.detail?.vendorId || '').trim();
+      if (vId) {
+        setLikedVendorIds(prev => prev.filter(id => id !== vId));
+      }
+    };
+
+    window.addEventListener('vendorLiked', handleLiked as EventListener);
+    window.addEventListener('vendorUnliked', handleUnliked as EventListener);
+    return () => {
+      window.removeEventListener('vendorLiked', handleLiked as EventListener);
+      window.removeEventListener('vendorUnliked', handleUnliked as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     // Check if customer is logged in
@@ -690,6 +746,7 @@ export const CustomerAuthProvider: React.FC<CustomerAuthProviderProps> = ({ chil
   const value: CustomerAuthContextType = {
     customer,
     loading,
+    likedVendorIds,
     signUp,
     signIn,
     signOut,

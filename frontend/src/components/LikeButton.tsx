@@ -24,7 +24,7 @@ const LikeButton: React.FC<LikeButtonProps> = ({
   className = '',
   onLikeChange
 }) => {
-  const { customer, signIn, sendCustomerResetCode, resetCustomerPasswordWithCode } = useCustomerAuth();
+  const { customer, signIn, sendCustomerResetCode, resetCustomerPasswordWithCode, likedVendorIds } = useCustomerAuth();
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -67,12 +67,18 @@ const LikeButton: React.FC<LikeButtonProps> = ({
 
   useEffect(() => {
     if (customer && vendorId) {
-      checkIfLiked();
+      if (likedVendorIds) {
+        const liked = likedVendorIds.includes(String(vendorId).trim());
+        setIsLiked(liked);
+        setInitialized(true);
+      } else {
+        checkIfLiked();
+      }
     } else {
       setInitialized(true);
       setIsLiked(false);
     }
-  }, [customer?.id, vendorId]);
+  }, [customer?.id, vendorId, likedVendorIds]);
 
   useEffect(() => {
     const handleEvent = (e: CustomEvent) => {

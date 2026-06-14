@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MapPin, Phone, Mail, Instagram, Heart, MessageCircle, Camera, Award, Users, Zap, Clock, ChevronLeft, Search, Filter, SlidersHorizontal, TrendingUp, DollarSign } from 'lucide-react';
+import { Star, MapPin, Phone, Mail, Instagram, Heart, MessageCircle, Camera, Award, Users, Zap, Clock, ChevronLeft, Search, Filter, SlidersHorizontal, TrendingUp, DollarSign, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -291,6 +291,32 @@ const PhotographyVendors = () => {
           
           {/* Compact Horizontal Filter Bar */}
           <div className="max-w-7xl mx-auto">
+            {/* Mobile Filter Bar Trigger (hidden on desktop) */}
+            <div className="block md:hidden bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/40 p-4 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search photographers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-10 border border-gray-300 focus:border-amber-400 focus:ring-1 focus:ring-amber-200 rounded-xl text-sm"
+                  />
+                </div>
+                <Button
+                  onClick={() => setShowMobileFilters(true)}
+                  variant="outline"
+                  className="h-10 px-3 border-gray-300 hover:bg-gray-50 rounded-xl flex items-center justify-center gap-1 text-gray-700 bg-white"
+                >
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span className="text-sm font-semibold">Filters</span>
+                  {(locationFilter !== 'all' || priceFilter !== 'all' || sortBy !== 'rating') && (
+                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                  )}
+                </Button>
+              </div>
+            </div>
+
             {/* Premium Glassmorphism Filter Bar */}
             <div className="hidden md:block bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 p-5 hover:shadow-3xl transition-all duration-300" style={{
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2)'
@@ -713,6 +739,134 @@ const PhotographyVendors = () => {
           </Button>
         </div>
       </div>
+
+      {/* Mobile Filter Drawer Overlay */}
+      {showMobileFilters && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-gray-800" />
+              <h2 className="text-lg font-bold text-gray-800">Filters & Sort</h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowMobileFilters(false)}
+              className="text-gray-500 hover:text-gray-800 rounded-full h-8 w-8"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Scrollable Filters Content */}
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 pb-28">
+            {/* Sort Options */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Sort By</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'rating', label: 'Top Rated' },
+                  { value: 'price-low', label: 'Price: Low to High' },
+                  { value: 'price-high', label: 'Price: High to Low' },
+                  { value: 'experience', label: 'Experience' },
+                  { value: 'reviews', label: 'Most Reviews' }
+                ].map((sortOption) => (
+                  <button
+                    key={sortOption.value}
+                    onClick={() => setSortBy(sortOption.value)}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all duration-200 text-left ${
+                      sortBy === sortOption.value
+                        ? 'border-orange-500 bg-orange-50 text-orange-600 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {sortOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Location Filter */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">City Location</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'all', label: 'All Cities' },
+                  { value: 'hyderabad', label: 'Hyderabad' },
+                  { value: 'bangalore', label: 'Bangalore' },
+                  { value: 'chennai', label: 'Chennai' },
+                  { value: 'mumbai', label: 'Mumbai' }
+                ].map((locOption) => (
+                  <button
+                    key={locOption.value}
+                    onClick={() => setLocationFilter(locOption.value)}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all duration-200 text-center ${
+                      locationFilter === locOption.value
+                        ? 'border-orange-500 bg-orange-50 text-orange-600 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {locOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <hr className="border-gray-100" />
+
+            {/* Budget Range */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Budget</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'all', label: 'All Prices' },
+                  { value: 'budget', label: 'Under ₹35k' },
+                  { value: 'mid', label: '₹35k - ₹45k' },
+                  { value: 'premium', label: 'Above ₹45k' }
+                ].map((prOption) => (
+                  <button
+                    key={prOption.value}
+                    onClick={() => setPriceFilter(prOption.value)}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all duration-200 text-center ${
+                      priceFilter === prOption.value
+                        ? 'border-orange-500 bg-orange-50 text-orange-600 font-bold'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {prOption.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Actions Footer */}
+          <div className="absolute bottom-0 inset-x-0 bg-white border-t border-gray-100 p-4 flex gap-3 shadow-2xl z-10">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery('');
+                setLocationFilter('all');
+                setPriceFilter('all');
+                setSortBy('rating');
+                setShowMobileFilters(false);
+              }}
+              className="flex-1 h-12 border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-sm text-gray-600"
+            >
+              Clear All
+            </Button>
+            <Button
+              onClick={() => setShowMobileFilters(false)}
+              className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-bold text-sm shadow-md"
+            >
+              Apply Filters ({filteredAndSortedPhotographers.length})
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
