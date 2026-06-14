@@ -1105,6 +1105,141 @@ const VendorDashboard: React.FC = () => {
       
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-orange-50">
       
+      {/* Mobile Welcome Header - Visible on Mobile, Hidden on Desktop */}
+      <div className="md:hidden shadow-lg border-b-4 border-orange-400 px-4 py-4 text-white" style={{ backgroundColor: '#001B5E' }}>
+        <div className="flex items-center justify-between gap-3">
+          {/* Left Side: Avatar + Greeting & Name */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative flex-shrink-0">
+              <img
+                src={vendor.avatar_url || '/images/vendor.jpeg'}
+                alt={vendor.brand_name}
+                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center">
+                <CheckCircle className="w-1.5 h-1.5 text-white" />
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs text-white/70 font-medium">
+                {(() => {
+                  const hr = new Date().getHours();
+                  if (hr < 12) return 'Good morning';
+                  if (hr < 17) return 'Good afternoon';
+                  return 'Good evening';
+                })()}
+              </div>
+              <h1 className="text-sm font-bold truncate leading-tight flex flex-wrap items-center gap-1">
+                <span>{vendor.spoc_name || vendor.brand_name}</span>
+                <span className="text-orange-300 font-extrabold tracking-wider text-[11px] bg-orange-500/20 px-1.5 py-0.5 rounded border border-orange-400/30 uppercase">
+                  {(() => {
+                    const categories = Array.isArray(vendor.category) 
+                      ? vendor.category 
+                      : (vendor.categories || (vendor.category ? [vendor.category] : []));
+                    const categoryStr = categories[0] || '';
+                    const lower = categoryStr.toLowerCase();
+                    if (lower.includes('decor')) return 'DECORS';
+                    if (lower.includes('photo') || lower.includes('video')) return 'PHOTOGRAPHY';
+                    if (lower.includes('cater')) return 'CATERERS';
+                    if (lower.includes('make') || lower.includes('artist') || lower.includes('salon')) return 'MAKEUP';
+                    if (lower.includes('planner')) return 'PLANNERS';
+                    if (lower.includes('venue') || lower.includes('hall')) return 'VENUES';
+                    if (lower.includes('dj') || lower.includes('music') || lower.includes('entertainment')) return 'ENTERTAINMENT';
+                    return categoryStr.split(' ')[0].toUpperCase() || 'VENDOR';
+                  })()}
+                </span>
+              </h1>
+            </div>
+          </div>
+
+          {/* Right Side: Notifications & Logout */}
+          <div className="flex items-center gap-2 flex-shrink-0 relative">
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleNotificationClick}
+                className="relative bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 hover:border-white/40 transition-all rounded-lg p-2 h-9 w-9 flex items-center justify-center"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full w-4.5 h-4.5 flex items-center justify-center animate-pulse shadow-lg font-bold">
+                    {unreadNotificationCount}
+                  </span>
+                )}
+              </Button>
+              
+              {/* Notifications Dropdown for Mobile */}
+              {showNotifications && (
+                <div className="notification-dropdown absolute right-[-50px] top-full mt-2 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto">
+                  <div className="p-3 border-b border-gray-200 flex justify-between items-center bg-gray-50 text-left">
+                    <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
+                    {unreadNotificationCount > 0 && (
+                      <button 
+                        onClick={async () => {
+                          await markAllNotificationsAsRead(vendor.vendor_id);
+                          // refresh notifications
+                          const updated = await getVendorNotifications(vendor.vendor_id);
+                          setNotifications(updated);
+                          setUnreadNotificationCount(0);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      notifications.map((notification) => (
+                        <div key={notification.id} className="p-3 border-b border-gray-100 hover:bg-gray-50 text-left">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-shrink-0 mt-0.5">
+                              {notification.notification_type === 'contact' ? (
+                                <MessageCircle className="w-4 h-4 text-blue-500" />
+                              ) : notification.notification_type === 'profile_view' ? (
+                                <Eye className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <Bell className="w-4 h-4 text-orange-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 text-xs truncate">
+                                {notification.title}
+                              </h4>
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <span className="text-[10px] text-gray-400">
+                                {new Date(notification.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center text-gray-500 text-xs">
+                        <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                        <p>No notifications</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-red-500/20 hover:border-red-300/40 transition-all rounded-lg p-2 h-9 w-9 flex items-center justify-center"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Brand-Aligned Welcome Header - Hidden on Mobile, Visible on Desktop */}
       <div className="hidden md:block shadow-2xl border-b-4 border-orange-400" style={{ backgroundColor: '#001B5E' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
