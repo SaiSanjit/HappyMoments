@@ -293,32 +293,33 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText className="w-6 h-6" />
-              <h2 className="text-2xl font-bold">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 sm:p-4 md:p-6 flex-shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+              <h2 className="text-base sm:text-xl md:text-2xl font-bold truncate">
                 {editData ? 'Edit' : 'Create'} {type === 'invoice' ? 'Invoice' : 'Quotation'}
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {!editData && (
                 <Button
                   onClick={loadSampleData}
                   variant="outline"
                   size="sm"
-                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30 h-8 sm:h-9 text-xs sm:text-sm px-2.5 sm:px-3"
                 >
-                  📋 Sample Data
+                  <span className="hidden sm:inline">📋 Sample Data</span>
+                  <span className="sm:hidden">📋 Sample</span>
                 </Button>
               )}
               <Button
                 onClick={onClose}
                 variant="outline"
                 size="sm"
-                className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                className="bg-white/20 hover:bg-white/30 text-white border-white/30 p-2 h-8 w-8 sm:h-9 sm:w-9"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -326,7 +327,7 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
           </div>
         </div>
 
-        <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+        <div className="p-3 sm:p-6 overflow-y-auto flex-1">
           {/* General Error Display */}
           {errors.general && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
