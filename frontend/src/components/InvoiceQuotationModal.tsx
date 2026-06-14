@@ -34,8 +34,8 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
     terms: '',
     template_id: 'template-1',
     tax_rate: 18,
-    discount_rate: 0,
-    coupon_name: ''
+    discount_rate: 10,
+    coupon_name: 'VENDOR COUPON'
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -102,8 +102,8 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
           : 'This quotation is valid for 30 days from the date of issue. Prices are subject to change without notice.',
         template_id: 'template-1',
         tax_rate: 18,
-        discount_rate: 0,
-        coupon_name: ''
+        discount_rate: 10,
+        coupon_name: 'VENDOR COUPON'
       });
       setSelectedLead('new');
     }

@@ -62,6 +62,31 @@ export const generateDocumentNumber = async (type: 'invoice' | 'quotation', vend
   return `${prefix}-${vendorCode}-${paddedSequence}`;
 };
 
+// Helper function to parse coupon details from notes if the DB doesn't have native columns
+export const parseCouponFromNotes = (doc: any): any => {
+  if (!doc) return doc;
+  
+  // If the columns already exist and have values, don't override them unless they are missing
+  if (doc.discount_rate !== undefined && doc.discount_rate !== null) {
+    return doc;
+  }
+  
+  if (doc.notes && typeof doc.notes === 'string') {
+    // Regex to match: [HM Coupon: NAME (RATE% Off) - Save Rs. AMOUNT]
+    const match = doc.notes.match(/\[HM Coupon:\s*(.*?)\s*\((\d+(?:\.\d+)?)\%\s*Off\)\s*-\s*Save\s*Rs\.\s*(\d+(?:\.\d+)?)\]/);
+    if (match) {
+      return {
+        ...doc,
+        coupon_name: match[1] || 'VENDOR COUPON',
+        discount_rate: parseFloat(match[2]) || 0,
+        discount_amount: parseFloat(match[3]) || 0
+      };
+    }
+  }
+  
+  return doc;
+};
+
 // Create new invoice/quotation
 export const createInvoiceQuotation = async (data: Omit<InvoiceQuotation, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data?: InvoiceQuotation; error?: string }> => {
   try {
@@ -147,7 +172,7 @@ export const createInvoiceQuotation = async (data: Omit<InvoiceQuotation, 'id' |
     }
 
     console.log('Successfully created invoice/quotation:', result);
-    return { success: true, data: result };
+    return { success: true, data: parseCouponFromNotes(result) };
   } catch (error) {
     console.error('Unexpected error creating invoice/quotation:', error);
     return { success: false, error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` };
@@ -170,7 +195,7 @@ export const getVendorInvoicesQuotations = async (vendorId: string | number): Pr
       return { success: false, error: error.message };
     }
 
-    return { success: true, data: data || [] };
+    return { success: true, data: (data || []).map(parseCouponFromNotes) };
   } catch (error) {
     console.error('Error fetching invoices/quotations:', error);
     return { success: false, error: 'Failed to fetch invoices/quotations' };
@@ -191,7 +216,7 @@ export const getInvoiceQuotation = async (id: number): Promise<{ success: boolea
       return { success: false, error: error.message };
     }
 
-    return { success: true, data };
+    return { success: true, data: parseCouponFromNotes(data) };
   } catch (error) {
     console.error('Error fetching invoice/quotation:', error);
     return { success: false, error: 'Failed to fetch invoice/quotation' };
@@ -201,19 +226,44 @@ export const getInvoiceQuotation = async (id: number): Promise<{ success: boolea
 // Update invoice/quotation
 export const updateInvoiceQuotation = async (id: number, updates: Partial<InvoiceQuotation>): Promise<{ success: boolean; data?: InvoiceQuotation; error?: string }> => {
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('invoice_quotations')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
 
+    if (error && (error.message.includes('column') || error.message.includes('does not exist'))) {
+      console.warn('Coupon/discount columns not found in database. Updating in notes fallback...');
+      const fallbackUpdates: any = { ...updates };
+      delete fallbackUpdates.discount_rate;
+      delete fallbackUpdates.discount_amount;
+      delete fallbackUpdates.coupon_name;
+      
+      if (updates.discount_rate !== undefined) {
+        const serializedCoupon = `[HM Coupon: ${updates.coupon_name || 'VENDOR COUPON'} (${updates.discount_rate || 0}% Off) - Save Rs. ${updates.discount_amount || 0}]`;
+        fallbackUpdates.notes = updates.notes 
+          ? `${serializedCoupon}\n${updates.notes}` 
+          : serializedCoupon;
+      }
+      
+      const retryResult = await supabase
+        .from('invoice_quotations')
+        .update({ ...fallbackUpdates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      data = retryResult.data;
+      error = retryResult.error;
+    }
+
     if (error) {
       console.error('Error updating invoice/quotation:', error);
       return { success: false, error: error.message };
     }
 
-    return { success: true, data };
+    return { success: true, data: parseCouponFromNotes(data) };
   } catch (error) {
     console.error('Error updating invoice/quotation:', error);
     return { success: false, error: 'Failed to update invoice/quotation' };
