@@ -453,15 +453,53 @@ export const generateInvoiceQuotationPDF = async (
 };
 
 // Function to download PDF
-export const downloadPDF = (blob: Blob, filename: string) => {
+export const downloadPDF = async (blob: Blob, filename: string) => {
+  const file = new File([blob], filename, { type: 'application/pdf' });
+
+  // 1. Try Web Share API (native iOS share sheet - excellent for iPhone/mobile Safari)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: filename,
+        text: `PDF Document: ${filename}`
+      });
+      return; // Successfully shared/downloaded
+    } catch (error) {
+      console.log('Share sheet closed or failed:', error);
+      // If user cancelled, do not fallback to download, just abort.
+      if ((error as Error).name === 'AbortError') {
+        return; 
+      }
+    }
+  }
+
+  // 2. Fallback to Blob URL download (Desktop / Android / other environments)
   const url = URL.createObjectURL(blob);
+
+  // Check if iOS (safeguard in case share failed/cancelled but we still need to show/save it)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // Navigate current window or try open in new window
+    const newWindow = window.open(url, '_blank');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      window.location.href = url;
+    }
+    return;
+  }
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 100);
 };
 
 // Function to generate PDF and download
@@ -473,7 +511,7 @@ export const generateAndDownloadPDF = async (
   try {
     const blob = await generateInvoiceQuotationPDF(invoiceQuotation, vendor, options);
     const filename = `${invoiceQuotation?.number || 'document'}.pdf`;
-    downloadPDF(blob, filename);
+    await downloadPDF(blob, filename);
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error('Failed to generate PDF');
