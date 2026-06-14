@@ -33,7 +33,9 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
     services: [] as ServiceItem[],
     terms: '',
     template_id: 'template-1',
-    tax_rate: 18
+    tax_rate: 18,
+    discount_rate: 0,
+    coupon_name: ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +77,9 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         services: editData.services || [],
         terms: editData.terms || '',
         template_id: editData.template_id || 'template-1',
-        tax_rate: editData.tax_rate || 18
+        tax_rate: editData.tax_rate || 18,
+        discount_rate: editData.discount_rate || 0,
+        coupon_name: editData.coupon_name || ''
       });
       
       // Try to find matching lead
@@ -97,7 +101,9 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
           ? 'Payment is due within 30 days of invoice date. Late payments may incur additional charges.'
           : 'This quotation is valid for 30 days from the date of issue. Prices are subject to change without notice.',
         template_id: 'template-1',
-        tax_rate: 18
+        tax_rate: 18,
+        discount_rate: 0,
+        coupon_name: ''
       });
       setSelectedLead('new');
     }
@@ -177,7 +183,9 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         ? 'Payment is due within 30 days of invoice date. Late payments may incur additional charges. All services include post-processing and delivery within 30 days.'
         : 'This quotation is valid for 30 days from the date of issue. Prices are subject to change without notice. Advance payment of 50% required to confirm booking.',
       template_id: 'template-1',
-      tax_rate: 18
+      tax_rate: 18,
+      discount_rate: 10,
+      coupon_name: 'VENDOR COUPON'
     });
     setErrors({});
   };
@@ -241,12 +249,12 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
       console.log('Vendor data:', vendor);
       console.log('Form data:', formData);
       
-      const totals = calculateTotals(formData.services, formData.tax_rate);
+      const totals = calculateTotals(formData.services, formData.tax_rate, formData.discount_rate);
       console.log('Calculated totals:', totals);
       
       const documentNumber = editData?.number || await generateDocumentNumber(type, vendor.vendor_id);
       console.log('Generated document number:', documentNumber);
-
+ 
       const invoiceQuotationData: Omit<InvoiceQuotation, 'id' | 'created_at' | 'updated_at'> = {
         type,
         vendor_id: typeof vendor.vendor_id === 'string' ? parseInt(vendor.vendor_id) : vendor.vendor_id,
@@ -262,6 +270,9 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         date: editData?.date || new Date().toISOString(),
         template_id: formData.template_id,
         subtotal: totals.subtotal,
+        discount_rate: formData.discount_rate,
+        discount_amount: totals.discountAmount,
+        coupon_name: formData.discount_rate > 0 ? 'VENDOR COUPON' : '',
         tax_rate: formData.tax_rate,
         tax_amount: totals.taxAmount,
         total_amount: totals.total,
@@ -287,7 +298,7 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
     }
   };
 
-  const totals = calculateTotals(formData.services, formData.tax_rate);
+  const totals = calculateTotals(formData.services, formData.tax_rate, formData.discount_rate);
 
   if (!isOpen) return null;
 
@@ -536,12 +547,43 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
                   <CardTitle className="text-lg">Pricing Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex justify-between">
+                  {/* Coupon Selection */}
+                  <div className="border-b pb-3 mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Apply HM Coupon
+                    </label>
+                    <select
+                      value={formData.discount_rate}
+                      onChange={(e) => {
+                        const rate = parseInt(e.target.value);
+                        setFormData(prev => ({
+                          ...prev,
+                          discount_rate: rate,
+                          coupon_name: rate > 0 ? 'VENDOR COUPON' : ''
+                        }));
+                      }}
+                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                    >
+                      <option value="0">No Coupon</option>
+                      <option value="5">VENDOR COUPON (5% Discount)</option>
+                      <option value="10">VENDOR COUPON (10% Discount)</option>
+                      <option value="15">VENDOR COUPON (15% Discount)</option>
+                    </select>
+                  </div>
+
+                  <div className="flex justify-between text-sm sm:text-base">
                     <span className="text-gray-600">Subtotal:</span>
                     <span className="font-medium">₹{totals.subtotal.toFixed(2)}</span>
                   </div>
 
-                  <div className="flex justify-between">
+                  {totals.discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600 text-sm sm:text-base font-medium">
+                      <span>Discount ({formData.coupon_name || 'VENDOR COUPON'} - {formData.discount_rate}%):</span>
+                      <span>-₹{totals.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between text-sm sm:text-base">
                     <span className="text-gray-600">Tax Rate (%):</span>
                     <Input
                       type="number"
@@ -554,13 +596,13 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
                     />
                   </div>
 
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm sm:text-base">
                     <span className="text-gray-600">Tax Amount:</span>
                     <span className="font-medium">₹{totals.taxAmount.toFixed(2)}</span>
                   </div>
 
                   <div className="border-t pt-2">
-                    <div className="flex justify-between text-lg font-bold">
+                    <div className="flex justify-between text-base sm:text-lg font-bold">
                       <span>Total:</span>
                       <span>₹{totals.total.toFixed(2)}</span>
                     </div>

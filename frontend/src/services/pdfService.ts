@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import { InvoiceQuotation } from './invoiceService';
 import { getVendorBrandLogoFromStorage } from './supabaseStorageService';
 
@@ -66,19 +66,21 @@ export const generateInvoiceQuotationPDF = async (
   let yPosition = margin;
 
   // Helper function to add text with word wrapping and proper alignment
-  const addText = (text: string, x: number, y: number, options: any = {}) => {
+  const addText = (text: any, x: number, y: number, options: any = {}) => {
     const { fontSize: textSize = fontSize, fontStyle = 'normal', color = '#000000', align = 'left' } = options;
     
     doc.setFontSize(textSize);
     doc.setFont(fontFamily, fontStyle);
     doc.setTextColor(color);
     
+    const textStr = text !== undefined && text !== null ? String(text) : '';
+    
     if (align === 'center') {
-      doc.text(text, x, y, { align: 'center' });
+      doc.text(textStr, x, y, { align: 'center' });
     } else if (align === 'right') {
-      doc.text(text, x, y, { align: 'right' });
+      doc.text(textStr, x, y, { align: 'right' });
     } else {
-      doc.text(text, x, y);
+      doc.text(textStr, x, y);
     }
   };
 
@@ -312,7 +314,12 @@ export const generateInvoiceQuotationPDF = async (
   const totalsX = pageWidth - margin - totalsWidth;
   
   // Check if totals fit on page
-  const totalsHeight = (invoiceQuotation.tax_rate && invoiceQuotation.tax_rate > 0) ? 22 : 16;
+  const hasDiscount = !!(invoiceQuotation.discount_rate && invoiceQuotation.discount_rate > 0);
+  const hasTax = !!(invoiceQuotation.tax_rate && invoiceQuotation.tax_rate > 0);
+  let totalsHeight = 16;
+  if (hasDiscount) totalsHeight += 5.5;
+  if (hasTax) totalsHeight += 5.5;
+
   if (yPosition + totalsHeight > pageHeight - 30) {
     doc.addPage();
     yPosition = margin + 10;
@@ -322,7 +329,14 @@ export const generateInvoiceQuotationPDF = async (
   addText(`Rs. ${invoiceQuotation.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#061D49', align: 'right' });
   yPosition += 5.5;
 
-  if (invoiceQuotation.tax_rate && invoiceQuotation.tax_rate > 0) {
+  if (hasDiscount) {
+    const couponName = invoiceQuotation.coupon_name || 'VENDOR COUPON';
+    addText(`${couponName} (${invoiceQuotation.discount_rate}%):`, totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#10b981' });
+    addText(`-Rs. ${(invoiceQuotation.discount_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#10b981', align: 'right' });
+    yPosition += 5.5;
+  }
+
+  if (hasTax) {
     addText(`Tax (${invoiceQuotation.tax_rate}%):`, totalsX, yPosition + 3.5, { fontSize: 9.5, color: '#4a5568' });
     addText(`Rs. ${(invoiceQuotation.tax_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, pageWidth - margin - 5, yPosition + 3.5, { fontSize: 9.5, color: '#061D49', align: 'right' });
     yPosition += 5.5;

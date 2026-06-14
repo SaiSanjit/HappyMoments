@@ -247,6 +247,12 @@ ${vendor.email ? `Email: ${vendor.email}` : ''}`;
                     <span className="text-gray-600">Subtotal:</span>
                     <span className="font-medium">{formatCurrency(invoiceQuotation.subtotal)}</span>
                   </div>
+                  {invoiceQuotation.discount_rate !== undefined && invoiceQuotation.discount_rate > 0 && (
+                    <div className="flex justify-between py-1 sm:py-2 text-green-600 font-medium">
+                      <span>Discount ({invoiceQuotation.coupon_name || 'VENDOR COUPON'} - {invoiceQuotation.discount_rate}%):</span>
+                      <span>-{formatCurrency(invoiceQuotation.discount_amount || 0)}</span>
+                    </div>
+                  )}
                   {invoiceQuotation.tax_rate && invoiceQuotation.tax_rate > 0 && (
                     <div className="flex justify-between py-1 sm:py-2">
                       <span className="text-gray-600">Tax ({invoiceQuotation.tax_rate}%):</span>

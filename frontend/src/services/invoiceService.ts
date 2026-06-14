@@ -24,6 +24,9 @@ export interface InvoiceQuotation {
   template_id: string;
   pdf_url?: string;
   subtotal: number;
+  discount_rate?: number; // Added for coupon support
+  discount_amount?: number; // Added for coupon support
+  coupon_name?: string; // Added for coupon support
   tax_rate?: number;
   tax_amount?: number;
   total_amount: number; // Changed from 'total' to 'total_amount' to match database
@@ -93,11 +96,33 @@ export const createInvoiceQuotation = async (data: Omit<InvoiceQuotation, 'id' |
 
     console.log('Inserting invoice data:', invoiceData);
 
-    const { data: result, error } = await supabase
+    let { data: result, error } = await supabase
       .from('invoice_quotations')
       .insert([invoiceData])
       .select()
       .single();
+
+    if (error && (error.message.includes('column') || error.message.includes('does not exist'))) {
+      console.warn('Coupon/discount columns not found in database. Storing in notes fallback...');
+      const fallbackData: any = { ...invoiceData };
+      delete fallbackData.discount_rate;
+      delete fallbackData.discount_amount;
+      delete fallbackData.coupon_name;
+      
+      const serializedCoupon = `[HM Coupon: ${invoiceData.coupon_name || 'VENDOR COUPON'} (${invoiceData.discount_rate || 0}% Off) - Save Rs. ${invoiceData.discount_amount || 0}]`;
+      fallbackData.notes = fallbackData.notes 
+        ? `${serializedCoupon}\n${fallbackData.notes}` 
+        : serializedCoupon;
+        
+      const retryResult = await supabase
+        .from('invoice_quotations')
+        .insert([fallbackData])
+        .select()
+        .single();
+        
+      result = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       console.error('Supabase error creating invoice/quotation:', error);
@@ -262,13 +287,19 @@ export const getInvoiceTemplates = async (): Promise<{ success: boolean; data?: 
   }
 };
 
-// Calculate totals
-export const calculateTotals = (services: ServiceItem[], taxRate: number = 0): { subtotal: number; taxAmount: number; total: number } => {
+// Calculate totals with discount
+export const calculateTotals = (
+  services: ServiceItem[], 
+  taxRate: number = 0,
+  discountRate: number = 0
+): { subtotal: number; discountAmount: number; taxAmount: number; total: number } => {
   const subtotal = services.reduce((sum, service) => sum + service.amount, 0);
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  const discountAmount = subtotal * (discountRate / 100);
+  const taxableSubtotal = Math.max(0, subtotal - discountAmount);
+  const taxAmount = taxableSubtotal * (taxRate / 100);
+  const total = taxableSubtotal + taxAmount;
   
-  return { subtotal, taxAmount, total };
+  return { subtotal, discountAmount, taxAmount, total };
 };
 
 // Generate PDF using jsPDF
