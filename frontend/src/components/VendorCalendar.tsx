@@ -67,7 +67,7 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
   const [selectedEvent, setSelectedEvent] = useState<VendorEvent | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm<EventFormData>();
 
@@ -122,6 +122,18 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
       currentDay.setDate(currentDay.getDate() + 1);
     }
     
+    return days;
+  };
+
+  // Get days of the current week
+  const getWeekDays = () => {
+    const current = new Date(currentDate);
+    const startOfWeek = new Date(current.setDate(current.getDate() - current.getDay()));
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      days.push(new Date(startOfWeek));
+      startOfWeek.setDate(startOfWeek.getDate() + 1);
+    }
     return days;
   };
 
@@ -280,15 +292,15 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
   return (
     <div className="space-y-6">
       {/* Calendar Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col xs:flex-row xs:items-center gap-4">
           <h2 className="text-2xl font-bold text-gray-900">Calendar</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setView('month')}
-              className={view === 'month' ? 'bg-blue-100 text-blue-700' : ''}
+              className={view === 'month' ? 'bg-blue-100 text-blue-700 font-semibold' : ''}
             >
               Month
             </Button>
@@ -296,7 +308,7 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
               variant="outline"
               size="sm"
               onClick={() => setView('week')}
-              className={view === 'week' ? 'bg-blue-100 text-blue-700' : ''}
+              className={view === 'week' ? 'bg-blue-100 text-blue-700 font-semibold' : ''}
             >
               Week
             </Button>
@@ -304,17 +316,17 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
               variant="outline"
               size="sm"
               onClick={() => setView('list')}
-              className={view === 'list' ? 'bg-blue-100 text-blue-700' : ''}
+              className={view === 'list' ? 'bg-blue-100 text-blue-700 font-semibold' : ''}
             >
               List
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={navigateToToday}>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={navigateToToday} className="flex-1 sm:flex-initial">
             Today
           </Button>
-          <Button onClick={() => handleNewEvent()} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => handleNewEvent()} className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-initial">
             <Plus className="w-4 h-4 mr-2" />
             Add Event
           </Button>
@@ -354,14 +366,22 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
                 const dayEvents = getEventsForDate(day);
                 const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                 const isToday = day.toDateString() === new Date().toDateString();
+                const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
                 
                 return (
                   <div
                     key={index}
-                    className={`min-h-24 p-1 border border-gray-200 cursor-pointer hover:bg-gray-50 ${
-                      !isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''
-                    } ${isToday ? 'bg-blue-50 border-blue-200' : ''}`}
-                    onClick={() => handleNewEvent(day)}
+                    className={`min-h-16 md:min-h-24 p-1 border border-gray-200 cursor-pointer transition-all ${
+                      !isCurrentMonth ? 'bg-gray-50/50 text-gray-400' : 'bg-white'
+                    } ${isToday ? 'bg-blue-50 border-blue-300' : ''} ${
+                      isSelected ? 'ring-2 ring-blue-600 bg-blue-50/70 z-10' : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      setSelectedDate(day);
+                      if (window.innerWidth > 768) {
+                        handleNewEvent(day);
+                      }
+                    }}
                   >
                     <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : ''}`}>
                       {day.getDate()}
@@ -390,6 +410,271 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
                 );
               })}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Daily Agenda View - Especially useful on mobile */}
+      {view === 'month' && (
+        <Card className="border-2 border-blue-50/50 shadow-md">
+          <CardHeader className="pb-3 bg-slate-50/30">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg font-bold text-[#001B5E]">
+                Agenda for {formatDate(selectedDate || new Date())}
+              </CardTitle>
+              <Button 
+                onClick={() => handleNewEvent(selectedDate || new Date())}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Event
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {getEventsForDate(selectedDate || new Date()).length > 0 ? (
+              <div className="space-y-3">
+                {getEventsForDate(selectedDate || new Date()).map(event => (
+                  <div 
+                    key={event.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-gray-100 hover:shadow-sm transition-all gap-2"
+                    style={{ borderLeftWidth: '4px', borderLeftColor: event.color }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="space-y-1">
+                        <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {event.all_day ? 'All day' : `${formatTime(event.start_datetime)} - ${formatTime(event.end_datetime)}`}
+                          </span>
+                          {event.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {event.location}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                      <Badge className={statusColors[event.status] + " text-[10px] px-2 py-0.5"}>
+                        {event.status}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-gray-950"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditEvent(event);
+                        }}
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500 text-sm">
+                No events scheduled for this date.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Week View */}
+      {view === 'week' && (
+        <Card>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">
+                Week of {getWeekDays()[0].toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} - {getWeekDays()[6].toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => {
+                  const newDate = new Date(currentDate);
+                  newDate.setDate(newDate.getDate() - 7);
+                  setCurrentDate(newDate);
+                }}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => {
+                  const newDate = new Date(currentDate);
+                  newDate.setDate(newDate.getDate() + 7);
+                  setCurrentDate(newDate);
+                }}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+              {getWeekDays().map((day, idx) => {
+                const dayEvents = getEventsForDate(day);
+                const isToday = day.toDateString() === new Date().toDateString();
+                const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+                
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded-xl border cursor-pointer min-h-[140px] transition-all flex flex-col justify-between ${
+                      isToday ? 'bg-blue-50/40 border-blue-300' : 'border-gray-200 bg-white hover:bg-gray-50'
+                    } ${isSelected ? 'ring-2 ring-blue-600 bg-blue-50/70' : ''}`}
+                    onClick={() => {
+                      setSelectedDate(day);
+                      if (window.innerWidth > 768) {
+                        handleNewEvent(day);
+                      }
+                    }}
+                  >
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-semibold text-gray-500">
+                          {day.toLocaleDateString('en-IN', { weekday: 'short' })}
+                        </span>
+                        <span className={`text-sm font-bold h-6 w-6 flex items-center justify-center rounded-full ${
+                          isToday ? 'bg-blue-600 text-white' : 'text-gray-800'
+                        }`}>
+                          {day.getDate()}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        {dayEvents.slice(0, 2).map(event => (
+                          <div
+                            key={event.id}
+                            className="text-[10px] p-1 rounded truncate font-medium cursor-pointer hover:opacity-85"
+                            style={{ backgroundColor: event.color + '15', color: event.color }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditEvent(event);
+                            }}
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+                        {dayEvents.length > 2 && (
+                          <div className="text-[10px] text-gray-500 font-semibold pl-1">
+                            +{dayEvents.length - 2} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-full text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 mt-2 p-0 flex items-center justify-center"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNewEvent(day);
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Daily Agenda View - week view select agenda */}
+      {view === 'week' && (
+        <Card className="border-2 border-blue-50/50 shadow-md mt-6">
+          <CardHeader className="pb-3 bg-slate-50/30">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg font-bold text-[#001B5E]">
+                Agenda for {formatDate(selectedDate || new Date())}
+              </CardTitle>
+              <Button 
+                onClick={() => handleNewEvent(selectedDate || new Date())}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Event
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {getEventsForDate(selectedDate || new Date()).length > 0 ? (
+              <div className="space-y-3">
+                {getEventsForDate(selectedDate || new Date()).map(event => (
+                  <div 
+                    key={event.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border border-gray-100 hover:shadow-sm transition-all gap-2"
+                    style={{ borderLeftWidth: '4px', borderLeftColor: event.color }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="space-y-1">
+                        <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {event.all_day ? 'All day' : `${formatTime(event.start_datetime)} - ${formatTime(event.end_datetime)}`}
+                          </span>
+                          {event.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {event.location}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                      <Badge className={statusColors[event.status] + " text-[10px] px-2 py-0.5"}>
+                        {event.status}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-500 hover:text-gray-950"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditEvent(event);
+                        }}
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteEvent(event);
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500 text-sm">
+                No events scheduled for this date.
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -524,7 +809,7 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
                 <label className="text-sm font-medium text-gray-700">All Day Event</label>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Start Date
@@ -546,7 +831,7 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
               </div>
 
               {!watch('all_day') && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Start Time
@@ -613,7 +898,7 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Priority
@@ -641,7 +926,7 @@ const VendorCalendar: React.FC<VendorCalendarProps> = ({
             </div>
 
             {/* Form Actions */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 type="button"
                 variant="outline"
