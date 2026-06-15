@@ -3,7 +3,7 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Vendor } from '@/lib/supabase';
 import { getVendorByFieldId, getVendorMedia, getHighlightedCatalogImages, getAllCatalogImages, getCustomerReviews } from '../services/supabaseService';
 import { getVendorBrandLogoFromStorage, getVendorContactPersonImageFromStorage } from '../services/supabaseStorageService';
-import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Info, Globe, Scroll, FileText, Menu, X, ChevronLeft } from 'lucide-react';
+import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Info, Globe, Scroll, FileText, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -80,6 +80,28 @@ const VendorProfile = () => {
   const reviewCount = useMemo(() => {
     return customerReviews.length;
   }, [customerReviews]);
+
+  // Keyboard navigation for gallery lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedImage === null || catalogImages.length === 0) return;
+      
+      if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
+        const newIndex = currentImageIndex - 1;
+        setCurrentImageIndex(newIndex);
+        setSelectedImage(catalogImages[newIndex]);
+      } else if (e.key === 'ArrowRight' && currentImageIndex < catalogImages.length - 1) {
+        const newIndex = currentImageIndex + 1;
+        setCurrentImageIndex(newIndex);
+        setSelectedImage(catalogImages[newIndex]);
+      } else if (e.key === 'Escape') {
+        setSelectedImage(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImage, currentImageIndex, catalogImages]);
 
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -768,33 +790,29 @@ const VendorProfile = () => {
                 {catalogImages.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3">
                     {catalogImages.slice(0, 6).map((image, index) => (
-                      <Dialog key={`gallery-${index}`}>
-                        <DialogTrigger asChild>
-                          <div className="relative group cursor-pointer overflow-hidden rounded-lg aspect-square">
-                            <img 
-                              src={image.media_url} 
-                              alt={image.title || `Gallery ${index + 1}`}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                            />
-                            {image.is_highlighted && (
-                              <div className="absolute top-2 right-2">
-                                <Badge className="bg-yellow-500 text-white text-xs px-1.5 py-0.5">
-                                  <Sparkles className="w-2 h-2 mr-1" />
-                                  ⭐
-                                </Badge>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                      <div 
+                        key={`gallery-${index}`}
+                        className="relative group cursor-pointer overflow-hidden rounded-lg aspect-square"
+                        onClick={() => {
+                          setCurrentImageIndex(index);
+                          setSelectedImage(image);
+                        }}
+                      >
+                        <img 
+                          src={image.media_url} 
+                          alt={image.title || `Gallery ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        {image.is_highlighted && (
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-yellow-500 text-white text-xs px-1.5 py-0.5">
+                              <Sparkles className="w-2 h-2 mr-1" />
+                              ⭐
+                            </Badge>
                           </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl">
-                          <img 
-                            src={image.media_url} 
-                            alt={image.title || `Gallery ${index + 1}`}
-                            className="w-full h-auto rounded-lg"
-                          />
-                        </DialogContent>
-                      </Dialog>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -1725,43 +1743,34 @@ const VendorProfile = () => {
                 {catalogImages.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
                     {catalogImages.map((image, index) => (
-                      <Dialog key={`catalog-${index}`}>
-                        <DialogTrigger asChild>
-                          <div 
-                            className="relative group cursor-pointer overflow-hidden rounded-xl"
-                            onClick={(e) => { e.stopPropagation(); setSelectedImage(image); }}
-                          >
-                            <img 
-                              src={image.media_url} 
-                              alt={image.title || `Catalog ${index + 1}`}
-                              className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
-                            />
-                            {image.is_highlighted && (
-                              <div className="absolute top-2 right-2">
-                                <Badge className="bg-yellow-500 text-white text-xs">
-                                  <Sparkles className="w-2 h-2 mr-1" />
-                                  ⭐
-                                </Badge>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                              <div className="text-white text-center">
-                                <Camera className="w-8 h-8 mx-auto mb-2" />
-                                <span className="text-sm font-medium">View Full Size</span>
-                              </div>
-                            </div>
+                      <div 
+                        key={`catalog-${index}`}
+                        className="relative group cursor-pointer overflow-hidden rounded-xl"
+                        onClick={() => {
+                          setCurrentImageIndex(index);
+                          setSelectedImage(image);
+                        }}
+                      >
+                        <img 
+                          src={image.media_url} 
+                          alt={image.title || `Catalog ${index + 1}`}
+                          className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        {image.is_highlighted && (
+                          <div className="absolute top-2 right-2">
+                            <Badge className="bg-yellow-500 text-white text-xs">
+                              <Sparkles className="w-2 h-2 mr-1" />
+                              ⭐
+                            </Badge>
                           </div>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-6xl">
-                          <div className="relative">
-                            <img 
-                              src={image.media_url} 
-                              alt={image.title || `Catalog ${index + 1}`}
-                              className="w-full h-auto rounded-lg"
-                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <div className="text-white text-center">
+                            <Camera className="w-8 h-8 mx-auto mb-2" />
+                            <span className="text-sm font-medium">View Full Size</span>
                           </div>
-                        </DialogContent>
-                      </Dialog>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -2350,6 +2359,105 @@ const VendorProfile = () => {
           onReviewSubmitted={refreshVendorData}
         />
       )}
+
+      {/* Global Gallery Lightbox Slider */}
+      <Dialog 
+        open={selectedImage !== null} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedImage(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-0 rounded-2xl flex flex-col items-center justify-center">
+          {selectedImage && catalogImages.length > 0 && (
+            <div 
+              className="relative w-full aspect-[4/3] max-h-[85vh] flex items-center justify-center p-4 focus:outline-none"
+              onTouchStart={(e) => {
+                const touchStartX = e.targetTouches[0].clientX;
+                (e.currentTarget as any)._touchStartX = touchStartX;
+              }}
+              onTouchMove={(e) => {
+                const touchEndX = e.targetTouches[0].clientX;
+                (e.currentTarget as any)._touchEndX = touchEndX;
+              }}
+              onTouchEnd={(e) => {
+                const touchStartX = (e.currentTarget as any)._touchStartX || 0;
+                const touchEndX = (e.currentTarget as any)._touchEndX || 0;
+                const swipeThreshold = 50;
+                const diffX = touchStartX - touchEndX;
+                
+                if (touchEndX !== 0 && Math.abs(diffX) > swipeThreshold) {
+                  if (diffX > 0) {
+                    // Swipe Left -> Show Next Image
+                    if (currentImageIndex < catalogImages.length - 1) {
+                      const newIndex = currentImageIndex + 1;
+                      setCurrentImageIndex(newIndex);
+                      setSelectedImage(catalogImages[newIndex]);
+                    }
+                  } else {
+                    // Swipe Right -> Show Prev Image
+                    if (currentImageIndex > 0) {
+                      const newIndex = currentImageIndex - 1;
+                      setCurrentImageIndex(newIndex);
+                      setSelectedImage(catalogImages[newIndex]);
+                    }
+                  }
+                }
+                // Reset touch references
+                (e.currentTarget as any)._touchStartX = 0;
+                (e.currentTarget as any)._touchEndX = 0;
+              }}
+            >
+              {/* Prev Button */}
+              {currentImageIndex > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newIndex = currentImageIndex - 1;
+                    setCurrentImageIndex(newIndex);
+                    setSelectedImage(catalogImages[newIndex]);
+                  }}
+                  className="absolute left-4 z-50 p-3 rounded-full bg-black/50 hover:bg-black/85 text-white hover:scale-110 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+                  title="Previous Image"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+              )}
+
+              {/* Main Image */}
+              <img 
+                src={catalogImages[currentImageIndex]?.media_url} 
+                alt={catalogImages[currentImageIndex]?.title || `Gallery ${currentImageIndex + 1}`}
+                className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl transition-all duration-300 select-none"
+              />
+
+              {/* Next Button */}
+              {currentImageIndex < catalogImages.length - 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const newIndex = currentImageIndex + 1;
+                    setCurrentImageIndex(newIndex);
+                    setSelectedImage(catalogImages[newIndex]);
+                  }}
+                  className="absolute right-4 z-50 p-3 rounded-full bg-black/50 hover:bg-black/85 text-white hover:scale-110 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+                  title="Next Image"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              )}
+
+              {/* Top/Bottom Overlay Info */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/60 px-4 py-2 rounded-full text-white text-sm font-semibold tracking-wide flex items-center gap-2 backdrop-blur-md">
+                <span>{currentImageIndex + 1}</span>
+                <span className="text-white/50">/</span>
+                <span>{catalogImages.length}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
     </div>
     </>

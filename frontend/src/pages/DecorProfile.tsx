@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Flower2, Youtube } from 'lucide-react';
+import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Flower2, Youtube, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -149,6 +149,28 @@ I'm really excited to connect and explore working with you soon! ✨`;
     }
   }, [isAutoPlaying, decorator.highlights.length]);
 
+  // Keyboard navigation for gallery lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedImage === null || portfolioImages.length === 0) return;
+      
+      if (e.key === 'ArrowLeft' && currentImageIndex > 0) {
+        const newIndex = currentImageIndex - 1;
+        setCurrentImageIndex(newIndex);
+        setSelectedImage(portfolioImages[newIndex]);
+      } else if (e.key === 'ArrowRight' && currentImageIndex < portfolioImages.length - 1) {
+        const newIndex = currentImageIndex + 1;
+        setCurrentImageIndex(newIndex);
+        setSelectedImage(portfolioImages[newIndex]);
+      } else if (e.key === 'Escape') {
+        setSelectedImage(null);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedImage, currentImageIndex, portfolioImages]);
+
   // Confetti effect
   const triggerConfetti = () => {
     setShowConfetti(true);
@@ -170,11 +192,19 @@ I'm really excited to connect and explore working with you soon! ✨`;
   };
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % portfolioImages.length);
+    if (currentImageIndex < portfolioImages.length - 1) {
+      const newIndex = currentImageIndex + 1;
+      setCurrentImageIndex(newIndex);
+      setSelectedImage(portfolioImages[newIndex]);
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + portfolioImages.length) % portfolioImages.length);
+    if (currentImageIndex > 0) {
+      const newIndex = currentImageIndex - 1;
+      setCurrentImageIndex(newIndex);
+      setSelectedImage(portfolioImages[newIndex]);
+    }
   };
 
   const nextSlide = () => {
@@ -764,11 +794,14 @@ I'm really excited to connect and explore working with you soon! ✨`;
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {decorator.portfolio.map((image, index) => (
-                    <Dialog key={index}>
-                      <DialogTrigger asChild>
                         <div 
+                          key={index}
                           className="relative group cursor-pointer overflow-hidden rounded-xl"
-                          onClick={(e) => { e.stopPropagation(); setSelectedImage(image); }}
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setCurrentImageIndex(index);
+                            setSelectedImage(image); 
+                          }}
                         >
                           <img 
                             src={image} 
@@ -782,17 +815,6 @@ I'm really excited to connect and explore working with you soon! ✨`;
                             </div>
                           </div>
                         </div>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-6xl">
-                        <div className="relative">
-                          <img 
-                            src={image} 
-                            alt={`Portfolio ${index + 1}`}
-                            className="w-full h-auto rounded-lg"
-                          />
-                        </div>
-                      </DialogContent>
-                    </Dialog>
                   ))}
                 </div>
               </CardContent>
@@ -1228,6 +1250,101 @@ I'm really excited to connect and explore working with you soon! ✨`;
           Chat Now
         </Button>
       </div>
+
+      {/* Global Gallery Lightbox Slider */}
+      <Dialog 
+        open={selectedImage !== null} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedImage(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-0 rounded-2xl flex flex-col items-center justify-center">
+          {selectedImage && portfolioImages.length > 0 && (
+            <div 
+              className="relative w-full aspect-[4/3] max-h-[85vh] flex items-center justify-center p-4 focus:outline-none"
+              onTouchStart={(e) => {
+                const touchStartX = e.targetTouches[0].clientX;
+                (e.currentTarget as any)._touchStartX = touchStartX;
+              }}
+              onTouchMove={(e) => {
+                const touchEndX = e.targetTouches[0].clientX;
+                (e.currentTarget as any)._touchEndX = touchEndX;
+              }}
+              onTouchEnd={(e) => {
+                const touchStartX = (e.currentTarget as any)._touchStartX || 0;
+                const touchEndX = (e.currentTarget as any)._touchEndX || 0;
+                const swipeThreshold = 50;
+                const diffX = touchStartX - touchEndX;
+                
+                if (touchEndX !== 0 && Math.abs(diffX) > swipeThreshold) {
+                  if (diffX > 0) {
+                    // Swipe Left -> Show Next Image
+                    if (currentImageIndex < portfolioImages.length - 1) {
+                      const newIndex = currentImageIndex + 1;
+                      setCurrentImageIndex(newIndex);
+                      setSelectedImage(portfolioImages[newIndex]);
+                    }
+                  } else {
+                    // Swipe Right -> Show Prev Image
+                    if (currentImageIndex > 0) {
+                      const newIndex = currentImageIndex - 1;
+                      setCurrentImageIndex(newIndex);
+                      setSelectedImage(portfolioImages[newIndex]);
+                    }
+                  }
+                }
+                // Reset touch references
+                (e.currentTarget as any)._touchStartX = 0;
+                (e.currentTarget as any)._touchEndX = 0;
+              }}
+            >
+              {/* Prev Button */}
+              {currentImageIndex > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                  className="absolute left-4 z-50 p-3 rounded-full bg-black/50 hover:bg-black/85 text-white hover:scale-110 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+                  title="Previous Image"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+              )}
+
+              {/* Main Image */}
+              <img 
+                src={portfolioImages[currentImageIndex]} 
+                alt={`Portfolio ${currentImageIndex + 1}`}
+                className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl transition-all duration-300 select-none"
+              />
+
+              {/* Next Button */}
+              {currentImageIndex < portfolioImages.length - 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                  className="absolute right-4 z-50 p-3 rounded-full bg-black/50 hover:bg-black/85 text-white hover:scale-110 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+                  title="Next Image"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              )}
+
+              {/* Top/Bottom Overlay Info */}
+              <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black/60 px-4 py-2 rounded-full text-white text-sm font-semibold tracking-wide flex items-center gap-2 backdrop-blur-md">
+                <span>{currentImageIndex + 1}</span>
+                <span className="text-white/50">/</span>
+                <span>{portfolioImages.length}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       </div>
     </>
