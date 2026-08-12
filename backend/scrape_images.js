@@ -34,45 +34,107 @@ async function scrapeImageUrls(page, brandName, category, area) {
   if (cleanCategory) searchQuery += ` ${cleanCategory}`;
   if (cleanArea) searchQuery += ` ${cleanArea}`;
   searchQuery += ' Hyderabad';
-  
-  console.log(`🌐 Searching DuckDuckGo Images for: "${searchQuery}"`);
-  
-  const url = `https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&iax=images&ia=images`;
-  
+
   try {
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 });
+    // 1. Try Justdial first
+    console.log(`🌐 Searching DuckDuckGo for Justdial listing of "${brandName}"...`);
+    const jdSearchQuery = `${brandName} ${cleanArea || ''} Hyderabad site:justdial.com`;
+    const jdSearchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(jdSearchQuery)}`;
     
-    // Wait for the image grid tiles to load
-    await page.waitForSelector('.tile--img__img', { timeout: 8000 });
+    await page.goto(jdSearchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Extract image sources
-    const urls = await page.evaluate(() => {
-      const images = Array.from(document.querySelectorAll('.tile--img__img'));
-      return images
-        .map(img => img.src || img.getAttribute('data-src'))
-        .filter(src => src && src.startsWith('http'));
+    // Extract Justdial link and decode it
+    const jdLink = await page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a.result__url'));
+      const jd = links.find(a => a.href.includes('justdial.com'));
+      return jd ? jd.href : null;
     });
     
-    return urls.slice(0, IMAGES_PER_VENDOR);
-  } catch (error) {
-    console.warn(`⚠️ Timeout/Error searching for "${brandName}". Trying fallback simple search.`);
-    try {
-      // Fallback query (just brand name)
-      const fallbackUrl = `https://duckduckgo.com/?q=${encodeURIComponent(brandName + ' Hyderabad')}&iax=images&ia=images`;
-      await page.goto(fallbackUrl, { waitUntil: 'networkidle2', timeout: 10000 });
-      await page.waitForSelector('.tile--img__img', { timeout: 5000 });
+    let decodedJdUrl = null;
+    if (jdLink) {
+      if (jdLink.includes('uddg=')) {
+        try {
+          const urlObj = new URL(jdLink);
+          decodedJdUrl = urlObj.searchParams.get('uddg');
+        } catch (e) {
+          console.warn('⚠️ Failed to parse DDG redirect URL, using link directly:', e.message);
+          decodedJdUrl = jdLink;
+        }
+      } else {
+        decodedJdUrl = jdLink;
+      }
+    }
+    
+    if (decodedJdUrl) {
+      console.log(`🔎 Found Justdial URL: ${decodedJdUrl}`);
+      console.log(`🌐 Navigating directly to Justdial...`);
       
-      const urls = await page.evaluate(() => {
-        const images = Array.from(document.querySelectorAll('.tile--img__img'));
-        return images
-          .map(img => img.src || img.getAttribute('data-src'))
-          .filter(src => src && src.startsWith('http'));
+      // Set headers and navigate
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://duckduckgo.com/'
       });
-      return urls.slice(0, IMAGES_PER_VENDOR);
-    } catch (fallbackError) {
-      console.error(`❌ Failed to scrape images for "${brandName}":`, fallbackError.message);
+      await page.goto(decodedJdUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Extract images from Justdial
+      const jdImages = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('img'))
+          .map(img => img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src') || img.getAttribute('data-original'))
+          .filter(src => {
+            if (!src || !src.startsWith('http')) return false;
+            // Filter only listing/catalogue images from Justdial
+            return src.includes('content.jdmagicbox.com') && 
+              (src.includes('/catalogue/') || src.includes('/gallery/') || src.includes('gallbox_image_') || src.includes('jddtl_slide_image') || src.includes('vendbox_image'));
+          });
+      });
+      
+      if (jdImages && jdImages.length > 0) {
+        const uniqueJdImages = [...new Set(jdImages)];
+        console.log(`✅ Successfully extracted ${uniqueJdImages.length} images from Justdial!`);
+        return uniqueJdImages.slice(0, IMAGES_PER_VENDOR);
+      } else {
+        console.warn(`⚠️ No gallery images found on Justdial listing.`);
+      }
+    } else {
+      console.log(`⚠️ No Justdial listing found for "${brandName}"`);
+    }
+  } catch (err) {
+    console.error(`❌ Error attempting Justdial scrape:`, err.message);
+  }
+  
+  // 2. Fallback to DuckDuckGo Images
+  try {
+    console.log(`🌐 Falling back to DuckDuckGo Images search for: "${searchQuery}"`);
+    const ddgUrl = `https://duckduckgo.com/?q=${encodeURIComponent(searchQuery)}&iax=images&ia=images`;
+    await page.goto(ddgUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    const ddgImages = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('img'))
+        .map(img => img.src || img.getAttribute('data-src') || img.getAttribute('data-lazy-src'))
+        .filter(src => {
+          return src && src.startsWith('http') && 
+            !src.includes('duckduckgo.com/assets/') && 
+            !src.includes('avatar') && 
+            !src.includes('logo') && 
+            !src.includes('icon') &&
+            !src.includes('loader');
+        });
+    });
+    
+    if (ddgImages && ddgImages.length > 0) {
+      const uniqueDdgImages = [...new Set(ddgImages)];
+      console.log(`✅ Successfully extracted ${uniqueDdgImages.length} images from DDG Images fallback!`);
+      return uniqueDdgImages.slice(0, IMAGES_PER_VENDOR);
+    } else {
+      console.error(`❌ Failed to find any images on DuckDuckGo Images fallback.`);
       return [];
     }
+  } catch (ddgErr) {
+    console.error(`❌ Failed DuckDuckGo Images fallback:`, ddgErr.message);
+    return [];
   }
 }
 

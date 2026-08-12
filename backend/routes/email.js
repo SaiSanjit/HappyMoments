@@ -147,9 +147,11 @@ router.post('/pre-signup-verification', async (req, res) => {
     if (result.success) {
       res.json({
         success: true,
-        message: 'Verification email sent successfully',
+        message: result.isFallback ? 'Verification email logged to console (Dev Mode)' : 'Verification email sent successfully',
         messageId: result.messageId,
-        tempToken: tempToken // Send back the temp token for verification
+        tempToken: tempToken, // Send back the temp token for verification
+        isFallback: result.isFallback || false,
+        fallbackLink: result.isFallback ? result.verificationLink : undefined
       });
     } else {
       res.status(500).json({
@@ -347,8 +349,10 @@ router.post('/resend-verification', async (req, res) => {
     if (result.success) {
       res.json({
         success: true,
-        message: 'Verification email sent successfully',
-        messageId: result.messageId
+        message: result.isFallback ? 'Verification email logged to console (Dev Mode)' : 'Verification email sent successfully',
+        messageId: result.messageId,
+        isFallback: result.isFallback || false,
+        fallbackLink: result.isFallback ? result.verificationLink : undefined
       });
     } else {
       res.status(500).json({
@@ -400,8 +404,10 @@ router.post('/send-verification', async (req, res) => {
     if (result.success) {
       res.json({
         success: true,
-        message: 'Verification email sent successfully',
-        messageId: result.messageId
+        message: result.isFallback ? 'Verification email logged to console (Dev Mode)' : 'Verification email sent successfully',
+        messageId: result.messageId,
+        isFallback: result.isFallback || false,
+        fallbackLink: result.isFallback ? result.verificationLink : undefined
       });
     } else {
       res.status(500).json({

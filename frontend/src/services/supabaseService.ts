@@ -3059,7 +3059,8 @@ export const checkEventConflicts = async (
       .select('id, title, start_datetime, end_datetime')
       .eq('vendor_id', vendorId)
       .not('status', 'in', '(cancelled,completed)')
-      .or(`and(start_datetime.lte.${startDateTime},end_datetime.gt.${startDateTime}),and(start_datetime.lt.${endDateTime},end_datetime.gte.${endDateTime}),and(start_datetime.gte.${startDateTime},end_datetime.lte.${endDateTime})`);
+      .lt('start_datetime', endDateTime)
+      .gt('end_datetime', startDateTime);
 
     if (excludeEventId) {
       query = query.neq('id', excludeEventId);

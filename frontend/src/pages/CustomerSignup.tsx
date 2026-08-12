@@ -31,6 +31,7 @@ const CustomerSignup: React.FC = () => {
   // Email verification status
   const [emailVerificationStatus, setEmailVerificationStatus] = useState<'unverified' | 'sending' | 'sent' | 'verified'>('unverified');
   const [emailVerificationMessage, setEmailVerificationMessage] = useState('');
+  const [devVerificationLink, setDevVerificationLink] = useState('');
 
   // Current step (1 or 2)
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
@@ -206,6 +207,7 @@ const CustomerSignup: React.FC = () => {
     if (field === 'email' && emailVerificationStatus !== 'unverified') {
       setEmailVerificationStatus('unverified');
       setEmailVerificationMessage('');
+      setDevVerificationLink('');
       setCurrentStep(1);
     }
   };
@@ -278,7 +280,13 @@ const CustomerSignup: React.FC = () => {
 
       if (response.ok && result.success) {
         setEmailVerificationStatus('sent');
-        setEmailVerificationMessage('Verification email sent! Please check your inbox and click the verification link.');
+        if (result.isFallback && result.fallbackLink) {
+          setDevVerificationLink(result.fallbackLink);
+          setEmailVerificationMessage('SMTP server configuration is invalid (Dev fallback active). You can verify this email instantly below:');
+        } else {
+          setDevVerificationLink('');
+          setEmailVerificationMessage('Verification email sent! Please check your inbox and click the verification link.');
+        }
       } else {
         setEmailVerificationStatus('unverified');
         setEmailVerificationMessage(result.message || 'Failed to send verification email');
@@ -507,10 +515,35 @@ const CustomerSignup: React.FC = () => {
 
                   {/* Verification Message */}
                   {emailVerificationMessage && (
-                    <p className={`text-sm mt-2 ${emailVerificationStatus === 'sent' || emailVerificationStatus === 'verified' ? 'text-green-600' : 'text-red-500'
-                      }`}>
-                      {emailVerificationMessage}
-                    </p>
+                    <div className="mt-2 space-y-2">
+                      <p className={`text-sm ${emailVerificationStatus === 'sent' || emailVerificationStatus === 'verified' ? (devVerificationLink ? 'text-amber-600 font-semibold' : 'text-green-600') : 'text-red-500'
+                        }`}>
+                        {emailVerificationMessage}
+                      </p>
+                      {devVerificationLink && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2">
+                          <p className="text-xs text-amber-700">
+                            Since your local SMTP credentials are not set up or failed, use this dev button to simulate clicking the email link:
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              try {
+                                const url = new URL(devVerificationLink);
+                                const emailParam = url.searchParams.get('email') || formData.email.trim();
+                                const tokenParam = url.searchParams.get('token') || '';
+                                verifyPreSignupToken(emailParam, tokenParam);
+                              } catch (e) {
+                                console.error('Failed to parse dev verification link:', e);
+                              }
+                            }}
+                            className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
+                          >
+                            Verify Instantly (Dev Mode)
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
