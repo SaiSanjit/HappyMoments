@@ -50,6 +50,11 @@ import MyVendors from "./pages/MyVendors";
 import Contact from "./pages/Contact";
 import ComingSoon from "./pages/ComingSoon";
 import VendorLogin from "./components/VendorLogin";
+import { BusinessAuthProvider } from "./contexts/BusinessAuthContext";
+import BusinessLanding from "./pages/BusinessLanding";
+import BusinessLogin from "./pages/BusinessLogin";
+import BusinessSignup from "./pages/BusinessSignup";
+import BusinessDashboard from "./pages/BusinessDashboard";
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -59,7 +64,8 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <CustomerAuthProvider>
-              <TooltipProvider>
+              <BusinessAuthProvider>
+                <TooltipProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter
@@ -204,11 +210,18 @@ const App = () => {
                 <Route path="/blog/:blogId" element={<Navigate to="/" />} />
                 <Route path="/blog" element={<Navigate to="/" />} />
                 
+                {/* Business Owner Portal Routes */}
+                <Route path="/business" element={<BusinessLanding />} />
+                <Route path="/business/login" element={<BusinessLogin />} />
+                <Route path="/business/signup" element={<BusinessSignup />} />
+                <Route path="/business-dashboard" element={<BusinessDashboard />} />
+
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
               </BrowserRouter>
               </TooltipProvider>
+              </BusinessAuthProvider>
             </CustomerAuthProvider>
           </AuthProvider>
         </QueryClientProvider>

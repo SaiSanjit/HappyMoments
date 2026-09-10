@@ -11,11 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Menu, X, ChevronDown, User, Lock, LogIn, AlertCircle, Heart, Users, Bell, LogOut, Headphones, Utensils, Eye, EyeOff, Loader2, CheckCircle, Mail } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Menu, X, ChevronDown, User, Lock, LogIn, AlertCircle, Heart, Users, Bell, LogOut, Headphones, Utensils, Eye, EyeOff, Loader2, CheckCircle, Mail, Building2, PhoneCall, Phone, MessageCircle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserStore } from "@/store/userStore";
 import { useCustomerAuth } from "@/contexts/CustomerAuthContext";
+import { useBusinessAuth } from "@/contexts/BusinessAuthContext";
 import { vendorLogin, saveVendorSession, getLoggedInVendor, vendorLogout, getCustomerNotifications, markAllCustomerNotificationsAsRead, clearCustomerNotification, sendVendorResetCode, resetVendorPasswordWithCode } from "@/services/supabaseService";
 import { getLikedVendors } from "@/services/likedVendorsApiService";
 import { CATEGORY_LIST } from "@/constants/categories";
@@ -47,10 +48,12 @@ const Header = () => {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showTalkExecutiveModal, setShowTalkExecutiveModal] = useState(false);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const { customer, signOut: customerSignOut, signIn, signUp } = useCustomerAuth();
+  const { businessOwner } = useBusinessAuth();
 
   // Debug: Log user state
   console.log('Header - User state:', user);
@@ -515,6 +518,26 @@ const Header = () => {
                 My Vendors
               </Link>
 
+              {/* Talk with Executive Button */}
+              <button
+                onClick={() => setShowTalkExecutiveModal(true)}
+                className="flex items-center gap-1.5 text-emerald-300 hover:text-emerald-200 transition-colors font-semibold text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 whitespace-nowrap shadow-xs"
+                title="Talk with Executive via Call or WhatsApp to Finalize"
+              >
+                <PhoneCall className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Talk with Executive</span>
+              </button>
+
+              {/* For Businesses Button */}
+              <Link
+                to={businessOwner ? "/business-dashboard" : "/business"}
+                className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 transition-colors font-semibold text-xs px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-amber-400/40 whitespace-nowrap"
+                title="For Business Owners (Launch Venues & Stalls)"
+              >
+                <Building2 className="h-3.5 w-3.5 text-amber-400" />
+                <span>For Businesses</span>
+              </Link>
+
               {/* Helpline Button */}
               <Link
                 to="/contact"
@@ -538,6 +561,26 @@ const Header = () => {
             <>
               {/* Desktop buttons */}
               <div className="hidden md:flex items-center space-x-3">
+                {/* Talk with Executive Button for non-logged in users */}
+                <button
+                  onClick={() => setShowTalkExecutiveModal(true)}
+                  className="flex items-center gap-1.5 text-emerald-300 hover:text-emerald-200 transition-colors font-semibold text-xs px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 whitespace-nowrap shadow-xs"
+                  title="Talk with Executive via Call or WhatsApp to Finalize"
+                >
+                  <PhoneCall className="h-3.5 w-3.5 text-emerald-400" />
+                  <span>Talk with Executive</span>
+                </button>
+
+                {/* For Businesses Button for non-logged in users */}
+                <Link
+                  to={businessOwner ? "/business-dashboard" : "/business"}
+                  className="flex items-center gap-1.5 text-amber-300 hover:text-amber-200 transition-colors font-semibold text-xs px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-amber-400/40 whitespace-nowrap"
+                  title="For Business Owners (Launch Venues & Stalls)"
+                >
+                  <Building2 className="h-4 w-4 text-amber-400" />
+                  <span>For Businesses</span>
+                </Link>
+
                 {/* Helpline Button for non-logged in users */}
                 <Link
                   to="/contact"
@@ -595,10 +638,29 @@ const Header = () => {
       {/* Mobile menu - shows only Sign Up, Login, Vendor for non-logged in users */}
       {mobileMenuOpen && !customer && (
         <div
-          className={`lg:hidden absolute top-full left-0 right-0 ${scrolled ? "bg-wedding-navy/95" : "bg-wedding-navy/80"
-            } backdrop-blur-md shadow-lg border-t border-white/10 animate-fade-in`}
+          className="lg:hidden absolute top-full left-0 right-0 bg-wedding-navy shadow-2xl border-t border-white/10 animate-fade-in"
         >
           <div className="container-custom py-4 flex flex-col" style={{ gap: '14px' }}>
+            {/* Talk with Executive Button */}
+            <button
+              onClick={() => {
+                setShowTalkExecutiveModal(true);
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center justify-center gap-2 border-2 border-emerald-400 text-emerald-300 hover:bg-emerald-500 hover:text-white px-4 py-3 rounded-lg font-semibold shadow-lg transition-all duration-200 text-center w-full"
+            >
+              <PhoneCall className="h-5 w-5 text-emerald-400" />
+              <span>Talk with Executive (Call & WhatsApp)</span>
+            </button>
+
+            <Link
+              to={businessOwner ? "/business-dashboard" : "/business"}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-center gap-2 border-2 border-amber-400 text-amber-300 hover:bg-amber-400 hover:text-slate-900 px-4 py-3 rounded-lg font-semibold shadow-lg transition-all duration-200 text-center w-full"
+            >
+              <Building2 className="h-5 w-5" />
+              For Businesses (Launch & Stalls)
+            </Link>
             <button
               onClick={() => {
                 navigate('/customer-signup');
@@ -634,8 +696,7 @@ const Header = () => {
       {/* Mobile menu - full menu for logged in users */}
       {mobileMenuOpen && customer && (
         <div
-          className={`lg:hidden absolute top-full left-0 right-0 ${scrolled ? "bg-wedding-navy/95" : "bg-wedding-navy/80"
-            } backdrop-blur-md shadow-lg border-t border-white/10 animate-fade-in`}
+          className="lg:hidden absolute top-full left-0 right-0 bg-wedding-navy shadow-2xl border-t border-white/10 animate-fade-in"
         >
           <div className="container-custom py-4 flex flex-col space-y-4">
             <div className="flex flex-col space-y-2">
@@ -670,6 +731,28 @@ const Header = () => {
                 <Bell className="h-5 w-5" />
                 Notifications {unreadNotificationsCount > 0 && `(${unreadNotificationsCount})`}
               </button>
+
+              {/* Talk with Executive Button */}
+              <button
+                onClick={() => {
+                  setShowTalkExecutiveModal(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-center gap-2 text-emerald-300 hover:text-emerald-200 transition-colors font-semibold px-4 py-3 rounded-lg bg-emerald-500/20 border border-emerald-400/40"
+              >
+                <PhoneCall className="h-5 w-5 text-emerald-400" />
+                <span>Talk with Executive</span>
+              </button>
+
+              {/* For Businesses */}
+              <Link
+                to={businessOwner ? "/business-dashboard" : "/business"}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-2 text-amber-300 hover:text-amber-200 transition-colors font-semibold px-4 py-3 rounded-lg bg-white/10 border border-amber-400/40"
+              >
+                <Building2 className="h-5 w-5 text-amber-400" />
+                For Businesses (Launch & Stalls)
+              </Link>
 
               {/* Customer Dashboard */}
               <Link
@@ -1025,6 +1108,66 @@ const Header = () => {
               >
                 Logout
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Talk with Executive Modal */}
+      <Dialog open={showTalkExecutiveModal} onOpenChange={setShowTalkExecutiveModal}>
+        <DialogContent className="w-[94vw] sm:max-w-md p-0 rounded-2xl sm:rounded-3xl border-slate-200 overflow-hidden bg-white text-slate-900 shadow-2xl">
+          <div className="p-6 sm:p-7 space-y-5">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0 text-emerald-600 shadow-xs">
+                <PhoneCall className="h-6 w-6" />
+              </div>
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md">
+                  Direct Finalization Support
+                </span>
+                <DialogTitle className="text-xl font-black text-slate-900 mt-1.5">
+                  Talk with Executive
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Connect directly with our Senior Booking & Venue Coordinator to finalize your booking, discuss pricing, or verify dates instantly.
+                </DialogDescription>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 text-left space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span className="font-medium">Direct Coordinator Helpline</span>
+                <span className="text-emerald-700 font-semibold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Available Now
+                </span>
+              </div>
+              <div className="text-xl font-black text-slate-900 tracking-tight">
+                +91 7330732710
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Dedicated coordinator desk for instant venue availability, corporate packages, and immediate booking finalization.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <a
+                href="tel:+917330732710"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all"
+              >
+                <Phone className="h-4 w-4 text-emerald-400" />
+                <span>Call +91 7330732710</span>
+              </a>
+
+              <a
+                href="https://wa.me/917330732710?text=Hi%20HappyMoments!%20%F0%9F%91%8B%0A%0AI%20would%20like%20to%20talk%20with%20an%20Executive%20to%20finalize%20my%20event%2Fvenue%20booking.%0APlease%20share%20availability%20and%20booking%20details.%0AThank%20you!"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs font-bold bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm transition-all"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>Chat on WhatsApp</span>
+              </a>
             </div>
           </div>
         </DialogContent>
