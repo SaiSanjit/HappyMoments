@@ -11,32 +11,50 @@ export interface PDFOptions {
 }
 
 // Helper function to convert image URL to base64
-const convertImageUrlToBase64 = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous'; // Crucial to prevent CORS issues
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        try {
-          const dataURL = canvas.toDataURL('image/png');
-          resolve(dataURL);
-        } catch (e) {
-          reject(e);
+const convertImageUrlToBase64 = async (url: string): Promise<string> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('Failed to convert blob to data URL'));
         }
-      } else {
-        reject(new Error('Failed to get 2D context'));
-      }
-    };
-    img.onerror = (err) => {
-      reject(err);
-    };
-    img.src = url;
-  });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Crucial to prevent CORS issues
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          try {
+            const dataURL = canvas.toDataURL('image/png');
+            resolve(dataURL);
+          } catch (e) {
+            reject(e);
+          }
+        } else {
+          reject(new Error('Failed to get 2D context'));
+        }
+      };
+      img.onerror = (e) => {
+        reject(e);
+      };
+      img.src = url;
+    });
+  }
 };
 
 // Helper function to format date
@@ -110,8 +128,11 @@ export const generateInvoiceQuotationPDF = async (
     doc.rect(x, y, width, height, 'F');
   };
 
-  // Fetch brand logo URL from storage
-  let logoUrl = vendor?.brand_logo_url || null;
+  // Fetch brand logo URL from storage or vendor object
+  let logoUrl = vendor?.brand_logo_url || vendor?.avatar_url || null;
+  if (!logoUrl && vendor?.catalog_images_metadata && vendor.catalog_images_metadata.length > 0) {
+    logoUrl = vendor.catalog_images_metadata[0]?.media_url || null;
+  }
   if (!logoUrl && vendor?.vendor_id) {
     try {
       logoUrl = await getVendorBrandLogoFromStorage(vendor.vendor_id);
@@ -129,38 +150,54 @@ export const generateInvoiceQuotationPDF = async (
     }
   }
 
-  // Left side info (Business details)
+  // Left side info (Business details & Top Brand Logo)
   let leftY = margin;
-  addText(vendor?.brand_name || 'Your Business Name', margin, leftY, {
-    fontSize: 20,
+  let textStartX = margin;
+  
+  if (logoBase64) {
+    try {
+      const topLogoSize = 18; // 18mm x 18mm
+      doc.addImage(logoBase64, 'PNG', margin, margin, topLogoSize, topLogoSize);
+      textStartX = margin + topLogoSize + 4; // Start business details after logo
+    } catch (e) {
+      console.error('Error drawing top logo in PDF:', e);
+    }
+  }
+
+  addText(vendor?.brand_name || 'Your Business Name', textStartX, leftY + (logoBase64 ? 4 : 0), {
+    fontSize: 18,
     fontStyle: 'bold',
     color: '#061D49'
   });
-  leftY += 7.5;
+  leftY += (logoBase64 ? 8 : 7.5);
 
   const vendorCategory = Array.isArray(vendor?.categories || vendor?.category) 
     ? (vendor?.categories || vendor?.category).join(' & ') 
     : (vendor?.category || '');
   if (vendorCategory) {
-    addText(vendorCategory, margin, leftY, { fontSize: 10, fontStyle: 'bold', color: '#4a5568' });
+    addText(vendorCategory, textStartX, leftY + 1, { fontSize: 9.5, fontStyle: 'bold', color: '#4a5568' });
     leftY += 5;
   }
 
   const addressStr = vendor?.address || '';
-  const addressLines = doc.splitTextToSize(addressStr, 80);
+  const addressLines = doc.splitTextToSize(addressStr, 75);
   addressLines.slice(0, 3).forEach((line: string) => {
-    addText(line, margin, leftY, { fontSize: 9, color: '#4a5568' });
+    addText(line, textStartX, leftY + 1, { fontSize: 8.5, color: '#4a5568' });
     leftY += 4.2;
   });
 
   const vendorPhone = vendor?.phone_number || vendor?.whatsapp_number || '';
   if (vendorPhone) {
-    addText(`Phone: ${vendorPhone}`, margin, leftY, { fontSize: 9, color: '#4a5568' });
+    addText(`Phone: ${vendorPhone}`, textStartX, leftY + 1, { fontSize: 8.5, color: '#4a5568' });
     leftY += 4.2;
   }
   if (vendor?.email) {
-    addText(`Email: ${vendor.email}`, margin, leftY, { fontSize: 9, color: '#4a5568' });
+    addText(`Email: ${vendor.email}`, textStartX, leftY + 1, { fontSize: 8.5, color: '#4a5568' });
     leftY += 4.2;
+  }
+
+  if (logoBase64) {
+    leftY = Math.max(leftY, margin + 20);
   }
 
   // Right side info (Document details)
@@ -432,6 +469,15 @@ export const generateInvoiceQuotationPDF = async (
     try {
       // Draw brand logo at bottom left (15mm x 15mm)
       doc.addImage(logoBase64, 'PNG', margin, yPosition, 15, 15);
+      addText(vendor?.brand_name || '', margin + 18, yPosition + 6, {
+        fontSize: 9,
+        fontStyle: 'bold',
+        color: '#061D49'
+      });
+      addText(`Authorized ${invoiceQuotation?.type === 'invoice' ? 'Invoice' : 'Quotation'}`, margin + 18, yPosition + 11, {
+        fontSize: 8,
+        color: '#718096'
+      });
       yPosition += 18;
     } catch (e) {
       console.error('Error drawing logo at bottom left:', e);

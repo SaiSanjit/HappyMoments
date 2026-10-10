@@ -392,16 +392,6 @@ const VendorLogin: React.FC<VendorLoginProps> = ({ onClose }) => {
             </Button>
           </form>
         )}
-
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800 font-medium mb-2">Available Vendor Credentials:</p>
-          <div className="text-xs text-blue-700 space-y-1">
-            <div><strong>Test 6:</strong> Username: 59, Password: quPkJu</div>
-            <div><strong>Test 5:</strong> Username: 58, Password: eMoWz1</div>
-            <div><strong>Hima Bindu Events:</strong> Username: 48, Password: PmruCM</div>
-            <div><strong>Photographer Priya:</strong> Username: 54, Password: X7REp0</div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

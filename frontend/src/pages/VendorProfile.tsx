@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -658,14 +658,6 @@ I'm really excited to connect and explore working with you soon! ✨`;
                   <span className="relative z-10">Call</span>
                 </Button>
                 <Button
-                  onClick={(e) => { e.stopPropagation(); }}
-                  className="bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-lg hover:shadow-purple-500/25 hover:scale-105 active:scale-95 transition-all duration-200 relative overflow-hidden group"
-                >
-                  <div className="absolute inset-0 bg-white/20 scale-0 group-active:scale-100 transition-transform duration-150 rounded-xl"></div>
-                  <Calendar className="w-4 h-4 mr-2 relative z-10" />
-                  <span className="relative z-10">Visit</span>
-                </Button>
-                <Button
                   variant="outline"
                   size="icon"
                   onClick={(e) => { e.stopPropagation(); setIsSaved(!isSaved); }}
@@ -727,7 +719,7 @@ I'm really excited to connect and explore working with you soon! ✨`;
                     {photographer.category}
                   </Badge>
                   <Badge className="px-3 py-1 text-xs bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-full">
-                    <Calendar className="w-3 h-3 mr-1" />
+                    <Sparkles className="w-3 h-3 mr-1" />
                     {photographer.subcategory}
                   </Badge>
                 </div>
@@ -814,7 +806,7 @@ I'm really excited to connect and explore working with you soon! ✨`;
                             {photographer.category}
                           </Badge>
                           <Badge className="px-6 py-3 text-base font-semibold bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
+                            <Sparkles className="w-4 h-4" />
                             {photographer.subcategory}
                           </Badge>
                         </div>

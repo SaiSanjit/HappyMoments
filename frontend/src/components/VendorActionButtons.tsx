@@ -3,7 +3,6 @@ import { Button } from './ui/button';
 import { 
   MessageCircle, 
   Phone, 
-  Calendar, 
   Heart, 
   Share2, 
   Loader2,
@@ -48,7 +47,6 @@ const VendorActionButtons: React.FC<VendorActionButtonsProps> = ({
 
   const currentSize = sizeClasses[size];
   const [isCalling, setIsCalling] = useState(false);
-  const [isVisiting, setIsVisiting] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [showShareAnimation, setShowShareAnimation] = useState(false);
@@ -60,15 +58,6 @@ const VendorActionButtons: React.FC<VendorActionButtonsProps> = ({
     setTimeout(() => {
       setIsCalling(false);
     }, 2000);
-  };
-
-  // Handle visit action with loading animation
-  const handleVisit = async () => {
-    setIsVisiting(true);
-    // Simulate visit action
-    setTimeout(() => {
-      setIsVisiting(false);
-    }, 1500);
   };
 
   // Handle share action with animation
@@ -118,22 +107,6 @@ const VendorActionButtons: React.FC<VendorActionButtonsProps> = ({
           <Phone className={`${currentSize.icon} ${currentSize.iconMargin} relative z-10`} />
         )}
         <span className="relative z-10">{isCalling ? 'Calling...' : 'Call'}</span>
-      </Button>
-
-      {/* Visit Button */}
-      <Button 
-        onClick={handleVisit}
-        disabled={isVisiting}
-        className={`bg-purple-500 hover:bg-purple-600 active:bg-purple-700 disabled:bg-purple-400 text-white ${currentSize.button} font-semibold shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 relative overflow-hidden group`}
-        title="Schedule a visit"
-      >
-        <div className="absolute inset-0 bg-white/20 scale-0 group-active:scale-100 transition-transform duration-150 rounded-lg"></div>
-        {isVisiting ? (
-          <Loader2 className={`${currentSize.icon} ${currentSize.iconMargin} animate-spin relative z-10`} />
-        ) : (
-          <Calendar className={`${currentSize.icon} ${currentSize.iconMargin} relative z-10`} />
-        )}
-        <span className="relative z-10">{isVisiting ? 'Scheduling...' : 'Visit'}</span>
       </Button>
 
       {/* Favorite Button */}

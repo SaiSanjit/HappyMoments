@@ -22,7 +22,17 @@ import {
   RefreshCw,
   Archive,
   Send,
-  Bot
+  Bot,
+  Building2,
+  Coffee,
+  MapPin,
+  Wifi,
+  Utensils,
+  Music,
+  Phone,
+  Mail,
+  Sliders,
+  Tv
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Vendor } from "@/lib/supabase";
@@ -33,6 +43,136 @@ import SuccessModal from "@/components/SuccessModal";
 import InputModal from "@/components/InputModal";
 import AdminSendCustomerModal from "@/components/AdminSendCustomerModal";
 import MomoChat from "@/components/MomoChat";
+
+export interface EventSpace {
+  id: string;
+  name: string;
+  type: 'Cafe / Bistro' | 'Rooftop Lounge' | 'Private Dining' | 'Workshop Studio' | 'Garden Lawn' | 'Banquet & Party Hall' | 'Boutique Space';
+  spoc_name: string;
+  phone_number: string;
+  email?: string;
+  address: string;
+  city: string;
+  capacity_min: number;
+  capacity_max: number;
+  price_per_hour?: number;
+  starting_price?: number;
+  rating?: number;
+  review_count?: number;
+  verified: boolean;
+  currently_available: boolean;
+  cover_image_url: string;
+  description: string;
+  amenities: string[];
+}
+
+const INITIAL_EVENT_SPACES: EventSpace[] = [
+  {
+    id: "space-101",
+    name: "The Brew & Bistro Event Nook",
+    type: "Cafe / Bistro",
+    spoc_name: "Rahul Sharma",
+    phone_number: "+91 98765 43210",
+    email: "events@brewbistro.com",
+    address: "Road No 36, Jubilee Hills",
+    city: "Hyderabad",
+    capacity_min: 15,
+    capacity_max: 45,
+    price_per_hour: 1500,
+    starting_price: 12000,
+    rating: 4.8,
+    review_count: 24,
+    verified: true,
+    currently_available: true,
+    cover_image_url: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80",
+    description: "Aesthetic cafe with warm lighting, artisanal coffee setup, and customizable seating. Ideal for intimate birthday parties, book launches, workshops, and corporate team mixers.",
+    amenities: ["High-speed WiFi", "Air Conditioned", "In-house Catering", "Sound System / DJ", "Projector & Screen"]
+  },
+  {
+    id: "space-102",
+    name: "Skyline Oasis Rooftop Lounge",
+    type: "Rooftop Lounge",
+    spoc_name: "Ananya Reddy",
+    phone_number: "+91 98490 12345",
+    email: "skyline@oasisroof.in",
+    address: "Financial District, Gachibowli",
+    city: "Hyderabad",
+    capacity_min: 40,
+    capacity_max: 120,
+    price_per_hour: 4500,
+    starting_price: 35000,
+    rating: 4.9,
+    review_count: 42,
+    verified: true,
+    currently_available: true,
+    cover_image_url: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+    description: "Stunning open-air rooftop venue with panoramic city views, ambient lighting, dedicated bar setup, and fairy lights. Tailored for cocktail evenings, engagements, and VIP celebrations.",
+    amenities: ["Outdoor Terrace", "Bar License", "Sound System / DJ", "Valet Parking", "High-speed WiFi", "Air Conditioned"]
+  },
+  {
+    id: "space-103",
+    name: "Artisan Loft & Creative Studio",
+    type: "Workshop Studio",
+    spoc_name: "Vikram Varma",
+    phone_number: "+91 97000 88990",
+    email: "hello@artisanloft.space",
+    address: "100 Feet Road, Madhapur",
+    city: "Hyderabad",
+    capacity_min: 10,
+    capacity_max: 35,
+    price_per_hour: 1200,
+    starting_price: 8000,
+    rating: 4.7,
+    review_count: 18,
+    verified: true,
+    currently_available: true,
+    cover_image_url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+    description: "Minimalist industrial loft featuring high ceilings, natural sunlight, white brick walls, and modular furniture. Perfect for art masterclasses, pop-up stores, brand shoots, and seminars.",
+    amenities: ["High-speed WiFi", "Air Conditioned", "Projector & Screen", "Sound System / DJ"]
+  },
+  {
+    id: "space-104",
+    name: "Emerald Secret Garden Lawn & Cafe",
+    type: "Garden Lawn",
+    spoc_name: "Priya Rao",
+    phone_number: "+91 99887 76655",
+    email: "emeraldgarden@cafevent.com",
+    address: "Main Road, Sainikpuri",
+    city: "Hyderabad",
+    capacity_min: 50,
+    capacity_max: 200,
+    price_per_hour: 6000,
+    starting_price: 45000,
+    rating: 4.9,
+    review_count: 36,
+    verified: true,
+    currently_available: true,
+    cover_image_url: "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=800&q=80",
+    description: "Lush green lawn courtyard connected to a vintage garden cafe. Includes gazebos, wooden dance floor, and live food counters for Mehendi parties, sangeets, and outdoor receptions.",
+    amenities: ["Outdoor Terrace", "In-house Catering", "Valet Parking", "Sound System / DJ", "Air Conditioned"]
+  },
+  {
+    id: "space-105",
+    name: "Glasshouse Private Dining Lounge",
+    type: "Private Dining",
+    spoc_name: "Rohan Kapoor",
+    phone_number: "+91 91234 56789",
+    email: "reserve@glasshousedining.com",
+    address: "Road No 10, Banjara Hills",
+    city: "Hyderabad",
+    capacity_min: 12,
+    capacity_max: 30,
+    price_per_hour: 2500,
+    starting_price: 20000,
+    rating: 4.8,
+    review_count: 15,
+    verified: true,
+    currently_available: true,
+    cover_image_url: "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&q=80",
+    description: "Exclusive climate-controlled glass house surrounded by water features. Serves chef's special curated multi-course meals for private family dinners and corporate C-suite meetings.",
+    amenities: ["Air Conditioned", "In-house Catering", "High-speed WiFi", "Valet Parking"]
+  }
+];
 
 interface DashboardStats {
   totalVendors: number;
@@ -63,6 +203,231 @@ const AdminDashboard = () => {
   const [vendorStatsSearch, setVendorStatsSearch] = useState("");
   const [lostDealsSearch, setLostDealsSearch] = useState("");
   const navigate = useNavigate();
+
+  // Event Spaces States
+  const [eventSpaces, setEventSpaces] = useState<EventSpace[]>(() => {
+    const saved = localStorage.getItem("admin_event_spaces");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved event spaces:", e);
+      }
+    }
+    return INITIAL_EVENT_SPACES;
+  });
+
+  const [spaceSearchTerm, setSpaceSearchTerm] = useState("");
+  const [spaceTypeFilter, setSpaceTypeFilter] = useState("all");
+  const [spaceStatusFilter, setSpaceStatusFilter] = useState("all");
+
+  const [showAddSpaceModal, setShowAddSpaceModal] = useState(false);
+  const [showEditSpaceModal, setShowEditSpaceModal] = useState(false);
+  const [showViewSpaceModal, setShowViewSpaceModal] = useState(false);
+  const [editingSpace, setEditingSpace] = useState<EventSpace | null>(null);
+  const [viewingSpace, setViewingSpace] = useState<EventSpace | null>(null);
+
+  const [spaceFormData, setSpaceFormData] = useState<Partial<EventSpace>>({
+    name: "",
+    type: "Cafe / Bistro",
+    spoc_name: "",
+    phone_number: "",
+    email: "",
+    address: "",
+    city: "Hyderabad",
+    capacity_min: 20,
+    capacity_max: 60,
+    price_per_hour: 2000,
+    starting_price: 15000,
+    cover_image_url: "",
+    description: "",
+    verified: true,
+    currently_available: true,
+    amenities: ["High-speed WiFi", "Air Conditioned", "In-house Catering"]
+  });
+
+  useEffect(() => {
+    localStorage.setItem("admin_event_spaces", JSON.stringify(eventSpaces));
+  }, [eventSpaces]);
+
+  const AVAILABLE_AMENITIES = [
+    "High-speed WiFi",
+    "Air Conditioned",
+    "Valet Parking",
+    "In-house Catering",
+    "Sound System / DJ",
+    "Projector & Screen",
+    "Outdoor Terrace",
+    "Bar License"
+  ];
+
+  const handleToggleAmenityInForm = (amenity: string) => {
+    const current = spaceFormData.amenities || [];
+    if (current.includes(amenity)) {
+      setSpaceFormData({ ...spaceFormData, amenities: current.filter(a => a !== amenity) });
+    } else {
+      setSpaceFormData({ ...spaceFormData, amenities: [...current, amenity] });
+    }
+  };
+
+  const handleToggleAmenityInEdit = (amenity: string) => {
+    if (!editingSpace) return;
+    const current = editingSpace.amenities || [];
+    if (current.includes(amenity)) {
+      setEditingSpace({ ...editingSpace, amenities: current.filter(a => a !== amenity) });
+    } else {
+      setEditingSpace({ ...editingSpace, amenities: [...current, amenity] });
+    }
+  };
+
+  const handleSaveNewSpace = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!spaceFormData.name || !spaceFormData.phone_number) {
+      alert("Please enter Space Name and Contact Phone Number.");
+      return;
+    }
+    const newSpace: EventSpace = {
+      id: `space-${Date.now()}`,
+      name: spaceFormData.name || "Unnamed Space",
+      type: (spaceFormData.type as any) || "Cafe / Bistro",
+      spoc_name: spaceFormData.spoc_name || "Manager",
+      phone_number: spaceFormData.phone_number || "",
+      email: spaceFormData.email || "",
+      address: spaceFormData.address || "Hyderabad",
+      city: spaceFormData.city || "Hyderabad",
+      capacity_min: Number(spaceFormData.capacity_min) || 10,
+      capacity_max: Number(spaceFormData.capacity_max) || 50,
+      price_per_hour: Number(spaceFormData.price_per_hour) || 1500,
+      starting_price: Number(spaceFormData.starting_price) || 10000,
+      rating: 4.8,
+      review_count: 1,
+      verified: spaceFormData.verified !== false,
+      currently_available: spaceFormData.currently_available !== false,
+      cover_image_url: spaceFormData.cover_image_url || "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80",
+      description: spaceFormData.description || "A charming event space suitable for cafes, private dining, and gatherings.",
+      amenities: spaceFormData.amenities || ["High-speed WiFi", "Air Conditioned"]
+    };
+
+    setEventSpaces(prev => [newSpace, ...prev]);
+    setShowAddSpaceModal(false);
+    setSpaceFormData({
+      name: "",
+      type: "Cafe / Bistro",
+      spoc_name: "",
+      phone_number: "",
+      email: "",
+      address: "",
+      city: "Hyderabad",
+      capacity_min: 20,
+      capacity_max: 60,
+      price_per_hour: 2000,
+      starting_price: 15000,
+      cover_image_url: "",
+      description: "",
+      verified: true,
+      currently_available: true,
+      amenities: ["High-speed WiFi", "Air Conditioned", "In-house Catering"]
+    });
+    setSuccessModal({
+      isOpen: true,
+      title: "Event Space Registered",
+      message: `${newSpace.name} has been successfully added to Event Spaces!`
+    });
+  };
+
+  const handleUpdateSpace = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSpace) return;
+    setEventSpaces(prev => prev.map(space => 
+      space.id === editingSpace.id ? { ...editingSpace } : space
+    ));
+    setShowEditSpaceModal(false);
+    setEditingSpace(null);
+    setSuccessModal({
+      isOpen: true,
+      title: "Event Space Updated",
+      message: `${editingSpace.name} details have been updated successfully!`
+    });
+  };
+
+  const handleToggleSpaceVerified = (spaceId: string) => {
+    setEventSpaces(prev => prev.map(s => {
+      if (s.id === spaceId) {
+        return { ...s, verified: !s.verified };
+      }
+      return s;
+    }));
+  };
+
+  const handleToggleSpaceAvailability = (spaceId: string) => {
+    setEventSpaces(prev => prev.map(s => {
+      if (s.id === spaceId) {
+        return { ...s, currently_available: !s.currently_available };
+      }
+      return s;
+    }));
+  };
+
+  const handleDeleteSpace = (space: EventSpace) => {
+    setConfirmationModal({
+      isOpen: true,
+      title: "Delete Event Space",
+      message: `Are you sure you want to permanently delete "${space.name}"? This action cannot be undone.`,
+      type: "danger",
+      onConfirm: () => {
+        setEventSpaces(prev => prev.filter(s => s.id !== space.id));
+        setConfirmationModal({ ...confirmationModal, isOpen: false });
+        setSuccessModal({
+          isOpen: true,
+          title: "Event Space Removed",
+          message: `${space.name} has been deleted.`
+        });
+      }
+    });
+  };
+
+  const handleSendCustomerToSpace = (space: EventSpace) => {
+    const pseudoVendor: Vendor = {
+      vendor_id: space.id,
+      slug: space.id,
+      brand_name: space.name,
+      spoc_name: space.spoc_name,
+      phone_number: space.phone_number,
+      email: space.email,
+      category: space.type,
+      categories: ["Event Spaces", space.type],
+      address: `${space.address}, ${space.city}`,
+      verified: space.verified,
+      currently_available: space.currently_available,
+      starting_price: space.starting_price || space.price_per_hour
+    };
+    setSendCustomerModal({
+      isOpen: true,
+      vendor: pseudoVendor
+    });
+  };
+
+  const filteredEventSpaces = eventSpaces.filter(space => {
+    const searchLower = spaceSearchTerm.toLowerCase();
+    const matchesSearch = !spaceSearchTerm || (
+      space.name.toLowerCase().includes(searchLower) ||
+      space.address.toLowerCase().includes(searchLower) ||
+      space.spoc_name.toLowerCase().includes(searchLower) ||
+      space.phone_number.includes(spaceSearchTerm) ||
+      (space.email && space.email.toLowerCase().includes(searchLower)) ||
+      space.type.toLowerCase().includes(searchLower)
+    );
+
+    const matchesType = spaceTypeFilter === "all" || space.type === spaceTypeFilter;
+
+    let matchesStatus = true;
+    if (spaceStatusFilter === "verified") matchesStatus = space.verified;
+    else if (spaceStatusFilter === "unverified") matchesStatus = !space.verified;
+    else if (spaceStatusFilter === "active") matchesStatus = space.currently_available;
+    else if (spaceStatusFilter === "inactive") matchesStatus = !space.currently_available;
+
+    return matchesSearch && matchesType && matchesStatus;
+  });
 
   // Modal states
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -821,6 +1186,17 @@ const AdminDashboard = () => {
               >
                 <Users className="w-5 h-5 inline-block mr-3" />
                 Vendor Management ({vendors.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("event-spaces")}
+                className={`py-6 px-4 border-b-3 font-semibold text-sm transition-all duration-300 rounded-t-2xl ${
+                  activeTab === "event-spaces"
+                    ? "border-emerald-500 text-slate-800 bg-gradient-to-b from-emerald-50 to-transparent"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                <Building2 className="w-5 h-5 inline-block mr-3 text-emerald-600" />
+                Event Spaces ({eventSpaces.length})
               </button>
               <button
                 onClick={() => setActiveTab("approvals")}
@@ -1850,6 +2226,331 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
+
+        {/* Event Spaces Section */}
+        {activeTab === "event-spaces" && (
+          <div className="space-y-6">
+            {/* Stat Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-emerald-100 text-xs uppercase font-extrabold tracking-wider">Total Event Spaces</p>
+                    <h3 className="text-3xl font-black mt-2">{eventSpaces.length}</h3>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                    <Building2 className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-emerald-100/90 font-medium">
+                  Cafes, Rooftops, Lawns & Studios
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-amber-100 text-xs uppercase font-extrabold tracking-wider">Cafes & Bistros</p>
+                    <h3 className="text-3xl font-black mt-2">
+                      {eventSpaces.filter(s => s.type === "Cafe / Bistro").length}
+                    </h3>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                    <Coffee className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-amber-100/90 font-medium">
+                  Cozy event nooks & artisanal spots
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-sky-500 to-indigo-600 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sky-100 text-xs uppercase font-extrabold tracking-wider">Rooftops & Lawns</p>
+                    <h3 className="text-3xl font-black mt-2">
+                      {eventSpaces.filter(s => s.type === "Rooftop Lounge" || s.type === "Garden Lawn").length}
+                    </h3>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-sky-100/90 font-medium">
+                  Open-air venues & garden spots
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-800 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-xs uppercase font-extrabold tracking-wider">Verified Spaces</p>
+                    <h3 className="text-3xl font-black mt-2">
+                      {eventSpaces.filter(s => s.verified).length}
+                    </h3>
+                  </div>
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                    <Shield className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-blue-100/90 font-medium">
+                  Admin verified event partners
+                </div>
+              </div>
+            </div>
+
+            {/* Filter & Action Toolbar */}
+            <div className="bg-white/80 backdrop-blur-md border border-emerald-100 shadow-xl rounded-2xl p-6">
+              <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto flex-1">
+                  {/* Search input */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-emerald-600" />
+                    <input
+                      type="text"
+                      placeholder="Search space name, city, location, contact..."
+                      value={spaceSearchTerm}
+                      onChange={(e) => setSpaceSearchTerm(e.target.value)}
+                      className="pl-10 pr-10 py-3 bg-white border border-emerald-200 rounded-xl w-full focus:ring-2 focus:ring-emerald-500 text-slate-800 placeholder-slate-400 text-sm transition-all shadow-sm"
+                    />
+                    {spaceSearchTerm && (
+                      <button
+                        onClick={() => setSpaceSearchTerm("")}
+                        className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Type Filter */}
+                  <select
+                    value={spaceTypeFilter}
+                    onChange={(e) => setSpaceTypeFilter(e.target.value)}
+                    className="px-4 py-3 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-slate-800 text-sm shadow-sm font-medium"
+                  >
+                    <option value="all">All Space Types</option>
+                    <option value="Cafe / Bistro">Cafe / Bistro</option>
+                    <option value="Rooftop Lounge">Rooftop Lounge</option>
+                    <option value="Private Dining">Private Dining</option>
+                    <option value="Workshop Studio">Workshop Studio</option>
+                    <option value="Garden Lawn">Garden Lawn</option>
+                    <option value="Banquet & Party Hall">Banquet & Party Hall</option>
+                    <option value="Boutique Space">Boutique Space</option>
+                  </select>
+
+                  {/* Status Filter */}
+                  <select
+                    value={spaceStatusFilter}
+                    onChange={(e) => setSpaceStatusFilter(e.target.value)}
+                    className="px-4 py-3 bg-white border border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-slate-800 text-sm shadow-sm font-medium"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="verified">Verified Only</option>
+                    <option value="unverified">Unverified Only</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                  </select>
+                </div>
+
+                {/* Add Event Space Button */}
+                <button
+                  onClick={() => setShowAddSpaceModal(true)}
+                  className="w-full lg:w-auto px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg hover:shadow-emerald-500/20 hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add New Event Space
+                </button>
+              </div>
+            </div>
+
+            {/* Event Spaces Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredEventSpaces.map((space) => (
+                <div
+                  key={space.id}
+                  className="bg-white rounded-2xl border border-slate-100 shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-300 flex flex-col group"
+                >
+                  {/* Card Image Header */}
+                  <div className="relative h-52 overflow-hidden bg-slate-100">
+                    <img
+                      src={space.cover_image_url || "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80"}
+                      alt={space.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20" />
+                    
+                    {/* Type Badge */}
+                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-md text-emerald-800 text-xs font-black px-3 py-1 rounded-full shadow-md">
+                      {space.type}
+                    </span>
+
+                    {/* Status Badges */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      {space.verified && (
+                        <span className="bg-emerald-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" /> VERIFIED
+                        </span>
+                      )}
+                      <span
+                        className={`text-[10px] font-black px-2.5 py-1 rounded-full shadow ${
+                          space.currently_available
+                            ? "bg-blue-500 text-white"
+                            : "bg-amber-500 text-white"
+                        }`}
+                      >
+                        {space.currently_available ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </div>
+
+                    {/* Hourly Pricing & Rating Badge */}
+                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+                      <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20">
+                        <span className="text-xs text-amber-300 font-bold">★ {space.rating || 4.8}</span>
+                        <span className="text-[10px] text-slate-300">({space.review_count || 12})</span>
+                      </div>
+                      {space.price_per_hour && (
+                        <div className="bg-emerald-600/90 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-black tracking-wide text-white border border-emerald-400/30">
+                          ₹{space.price_per_hour.toLocaleString()}/hr
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <h4 className="text-lg font-black text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">
+                        {space.name}
+                      </h4>
+                      <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1 font-medium">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="line-clamp-1">{space.address}, {space.city}</span>
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-3 text-xs font-bold text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                        <Users className="w-4 h-4 text-emerald-600" />
+                        <span>Capacity: {space.capacity_min} - {space.capacity_max} Guests</span>
+                      </div>
+
+                      {/* SPOC Contact */}
+                      <div className="mt-3 p-2.5 rounded-xl bg-emerald-50/50 border border-emerald-100/60 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">Contact Person</p>
+                          <p className="font-extrabold text-slate-800">{space.spoc_name}</p>
+                        </div>
+                        <a
+                          href={`tel:${space.phone_number}`}
+                          className="px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors flex items-center gap-1 text-[11px]"
+                        >
+                          <Phone className="w-3 h-3" /> {space.phone_number}
+                        </a>
+                      </div>
+
+                      {/* Amenities Pills */}
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {(space.amenities || []).slice(0, 4).map((amenity, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-slate-200"
+                          >
+                            {amenity}
+                          </span>
+                        ))}
+                        {(space.amenities || []).length > 4 && (
+                          <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                            +{(space.amenities || []).length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Bar */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5">
+                      <button
+                        onClick={() => {
+                          setViewingSpace(space);
+                          setShowViewSpaceModal(true);
+                        }}
+                        className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="View Full Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setEditingSpace({ ...space });
+                          setShowEditSpaceModal(true);
+                        }}
+                        className="p-2 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                        title="Edit Space"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleSpaceVerified(space.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          space.verified
+                            ? "text-emerald-600 hover:bg-emerald-50"
+                            : "text-slate-400 hover:text-emerald-600 hover:bg-slate-50"
+                        }`}
+                        title={space.verified ? "Mark Unverified" : "Mark Verified"}
+                      >
+                        <Shield className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleToggleSpaceAvailability(space.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          space.currently_available
+                            ? "text-blue-600 hover:bg-blue-50"
+                            : "text-amber-500 hover:bg-amber-50"
+                        }`}
+                        title={space.currently_available ? "Deactivate Space" : "Activate Space"}
+                      >
+                        <Zap className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleSendCustomerToSpace(space)}
+                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="Send Customer Lead to Space"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteSpace(space)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Space"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {filteredEventSpaces.length === 0 && (
+                <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-lg">
+                  <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-4 animate-bounce" />
+                  <h3 className="text-xl font-bold text-slate-800">No Event Spaces Found</h3>
+                  <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                    No spaces match your search criteria. Try modifying your search filters or click below to add a new event space.
+                  </p>
+                  <button
+                    onClick={() => setShowAddSpaceModal(true)}
+                    className="mt-6 px-6 py-2.5 bg-emerald-600 text-white font-bold text-sm rounded-xl hover:bg-emerald-700 transition-all shadow-lg"
+                  >
+                    + Add New Event Space
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
       </div>
@@ -1887,6 +2588,553 @@ const AdminDashboard = () => {
           vendor={sendCustomerModal.vendor}
           onSendCustomer={handleSendCustomerSubmit}
         />
+      )}
+
+      {/* Add New Event Space Modal */}
+      {showAddSpaceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold">Add New Event Space</h3>
+                  <p className="text-xs text-emerald-100">Register cafes, rooftop lounges, private dining, or studio spaces</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddSpaceModal(false)}
+                className="p-2 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewSpace} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Space Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. The Artisanal Cafe & Nook"
+                    value={spaceFormData.name || ""}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, name: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Space Category / Type</label>
+                  <select
+                    value={spaceFormData.type || "Cafe / Bistro"}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, type: e.target.value as any })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  >
+                    <option value="Cafe / Bistro">Cafe / Bistro</option>
+                    <option value="Rooftop Lounge">Rooftop Lounge</option>
+                    <option value="Private Dining">Private Dining</option>
+                    <option value="Workshop Studio">Workshop Studio</option>
+                    <option value="Garden Lawn">Garden Lawn</option>
+                    <option value="Banquet & Party Hall">Banquet & Party Hall</option>
+                    <option value="Boutique Space">Boutique Space</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Contact Person (SPOC)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ramesh Kumar"
+                    value={spaceFormData.spoc_name || ""}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, spoc_name: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Phone Number *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. +91 98765 43210"
+                    value={spaceFormData.phone_number || ""}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, phone_number: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. contact@space.com"
+                    value={spaceFormData.email || ""}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, email: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">City</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Hyderabad"
+                    value={spaceFormData.city || "Hyderabad"}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, city: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Address / Locality</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Road No 36, Jubilee Hills"
+                  value={spaceFormData.address || ""}
+                  onChange={(e) => setSpaceFormData({ ...spaceFormData, address: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Min Guests</label>
+                  <input
+                    type="number"
+                    value={spaceFormData.capacity_min || 15}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, capacity_min: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Max Guests</label>
+                  <input
+                    type="number"
+                    value={spaceFormData.capacity_max || 50}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, capacity_max: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Price per Hour (₹)</label>
+                  <input
+                    type="number"
+                    value={spaceFormData.price_per_hour || 1500}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, price_per_hour: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Cover Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://images.unsplash.com/..."
+                  value={spaceFormData.cover_image_url || ""}
+                  onChange={(e) => setSpaceFormData({ ...spaceFormData, cover_image_url: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Description / Highlights</label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe the atmosphere, suitable events, and specialty food/setup options..."
+                  value={spaceFormData.description || ""}
+                  onChange={(e) => setSpaceFormData({ ...spaceFormData, description: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">Amenities</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {AVAILABLE_AMENITIES.map((amenity) => {
+                    const isChecked = (spaceFormData.amenities || []).includes(amenity);
+                    return (
+                      <button
+                        type="button"
+                        key={amenity}
+                        onClick={() => handleToggleAmenityInForm(amenity)}
+                        className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all text-left flex items-center gap-1.5 ${
+                          isChecked
+                            ? "bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[10px] ${isChecked ? "bg-emerald-600 text-white" : "border border-slate-300"}`}>
+                          {isChecked ? "✓" : ""}
+                        </span>
+                        {amenity}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6 pt-2 border-t border-slate-100">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={spaceFormData.verified !== false}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, verified: e.target.checked })}
+                    className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Verified Space Partner</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={spaceFormData.currently_available !== false}
+                    onChange={(e) => setSpaceFormData({ ...spaceFormData, currently_available: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Currently Available</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddSpaceModal(false)}
+                  className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-sm rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all"
+                >
+                  Save Event Space
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Event Space Modal */}
+      {showEditSpaceModal && editingSpace && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-6 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Edit className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-extrabold">Edit Event Space</h3>
+                  <p className="text-xs text-amber-100">Update details for {editingSpace.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEditSpaceModal(false);
+                  setEditingSpace(null);
+                }}
+                className="p-2 text-white/80 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSpace} className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Space Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingSpace.name}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, name: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Space Category / Type</label>
+                  <select
+                    value={editingSpace.type}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, type: e.target.value as any })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  >
+                    <option value="Cafe / Bistro">Cafe / Bistro</option>
+                    <option value="Rooftop Lounge">Rooftop Lounge</option>
+                    <option value="Private Dining">Private Dining</option>
+                    <option value="Workshop Studio">Workshop Studio</option>
+                    <option value="Garden Lawn">Garden Lawn</option>
+                    <option value="Banquet & Party Hall">Banquet & Party Hall</option>
+                    <option value="Boutique Space">Boutique Space</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Contact Person (SPOC)</label>
+                  <input
+                    type="text"
+                    value={editingSpace.spoc_name}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, spoc_name: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingSpace.phone_number}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, phone_number: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    value={editingSpace.email || ""}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, email: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">City</label>
+                  <input
+                    type="text"
+                    value={editingSpace.city}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, city: e.target.value })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Address / Locality</label>
+                <input
+                  type="text"
+                  value={editingSpace.address}
+                  onChange={(e) => setEditingSpace({ ...editingSpace, address: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Min Guests</label>
+                  <input
+                    type="number"
+                    value={editingSpace.capacity_min}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, capacity_min: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Max Guests</label>
+                  <input
+                    type="number"
+                    value={editingSpace.capacity_max}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, capacity_max: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Price per Hour (₹)</label>
+                  <input
+                    type="number"
+                    value={editingSpace.price_per_hour || 0}
+                    onChange={(e) => setEditingSpace({ ...editingSpace, price_per_hour: Number(e.target.value) })}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Cover Image URL</label>
+                <input
+                  type="url"
+                  value={editingSpace.cover_image_url || ""}
+                  onChange={(e) => setEditingSpace({ ...editingSpace, cover_image_url: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">Description</label>
+                <textarea
+                  rows={3}
+                  value={editingSpace.description || ""}
+                  onChange={(e) => setEditingSpace({ ...editingSpace, description: e.target.value })}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">Amenities</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {AVAILABLE_AMENITIES.map((amenity) => {
+                    const isChecked = (editingSpace.amenities || []).includes(amenity);
+                    return (
+                      <button
+                        type="button"
+                        key={amenity}
+                        onClick={() => handleToggleAmenityInEdit(amenity)}
+                        className={`px-3 py-2 text-xs font-bold rounded-xl border transition-all text-left flex items-center gap-1.5 ${
+                          isChecked
+                            ? "bg-amber-50 border-amber-500 text-amber-900 shadow-sm"
+                            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                        }`}
+                      >
+                        <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[10px] ${isChecked ? "bg-amber-600 text-white" : "border border-slate-300"}`}>
+                          {isChecked ? "✓" : ""}
+                        </span>
+                        {amenity}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditSpaceModal(false);
+                    setEditingSpace(null);
+                  }}
+                  className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-sm rounded-xl shadow-lg transition-all"
+                >
+                  Update Space Details
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View Event Space Details Modal */}
+      {showViewSpaceModal && viewingSpace && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200 my-8">
+            <div className="relative h-64 bg-slate-900">
+              <img
+                src={viewingSpace.cover_image_url || "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80"}
+                alt={viewingSpace.name}
+                className="w-full h-full object-cover opacity-90"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+              <button
+                onClick={() => {
+                  setShowViewSpaceModal(false);
+                  setViewingSpace(null);
+                }}
+                className="absolute top-4 right-4 p-2 text-white/80 hover:text-white bg-black/40 rounded-full hover:bg-black/60 transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+
+              <div className="absolute bottom-6 left-6 right-6 text-white">
+                <span className="bg-emerald-500 text-white text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                  {viewingSpace.type}
+                </span>
+                <h2 className="text-2xl font-black mt-2 text-white">{viewingSpace.name}</h2>
+                <p className="text-xs text-slate-300 flex items-center gap-1 mt-1 font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                  {viewingSpace.address}, {viewingSpace.city}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Hourly Price</p>
+                  <p className="text-lg font-black text-emerald-700 mt-0.5">
+                    ₹{(viewingSpace.price_per_hour || 0).toLocaleString()}/hr
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Capacity</p>
+                  <p className="text-base font-black text-slate-800 mt-0.5">
+                    {viewingSpace.capacity_min} - {viewingSpace.capacity_max} Pax
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 col-span-2 sm:col-span-1">
+                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Verification</p>
+                  <p className="text-xs font-black text-emerald-600 mt-1 flex items-center gap-1">
+                    <Shield className="w-4 h-4" /> {viewingSpace.verified ? "ADMIN VERIFIED" : "UNVERIFIED"}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-1">About Space</h4>
+                <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                  {viewingSpace.description}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2">Included Amenities</h4>
+                <div className="flex flex-wrap gap-2">
+                  {(viewingSpace.amenities || []).map((amenity, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-emerald-50 text-emerald-900 border border-emerald-200/60 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider">Contact Person</p>
+                  <p className="text-base font-black text-slate-900">{viewingSpace.spoc_name}</p>
+                  {viewingSpace.email && <p className="text-xs text-slate-500 font-medium">{viewingSpace.email}</p>}
+                </div>
+                <a
+                  href={`tel:${viewingSpace.phone_number}`}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-colors flex items-center gap-1.5"
+                >
+                  <Phone className="w-4 h-4" /> {viewingSpace.phone_number}
+                </a>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowViewSpaceModal(false);
+                  setViewingSpace(null);
+                }}
+                className="px-6 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-900 transition-colors"
+              >
+                Close Space Profile
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

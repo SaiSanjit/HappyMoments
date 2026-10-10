@@ -177,34 +177,35 @@ export const getVendorBrandLogoFromStorage = async (
     const vendorIdStr = vendorId.toString();
     const possibleBuckets = ['vendor-images', 'catalog-images', 'images', 'media'];
     
+    const possibleFolders = ['brand_logo', 'brand-logo', 'logo', 'catalog'];
     for (const bucket of possibleBuckets) {
-      try {
-        // Try brand_logo folder
-        const { data: files, error } = await supabase.storage
-          .from(bucket)
-          .list(`${vendorIdStr}/brand_logo`, {
-            limit: 10,
-            sortBy: { column: 'created_at', order: 'desc' }
-          });
+      for (const folder of possibleFolders) {
+        try {
+          const { data: files, error } = await supabase.storage
+            .from(bucket)
+            .list(`${vendorIdStr}/${folder}`, {
+              limit: 10,
+              sortBy: { column: 'created_at', order: 'desc' }
+            });
 
-        if (error) {
-          console.log(`No brand_logo folder in bucket ${bucket}, trying next...`);
+          if (error || !files || files.length === 0) {
+            continue;
+          }
+
+          // Pick the first valid image file
+          const logoFile = files.find(f => f.name && !f.name.startsWith('.')) || files[0];
+          if (logoFile) {
+            const { data: urlData } = supabase.storage
+              .from(bucket)
+              .getPublicUrl(`${vendorIdStr}/${folder}/${logoFile.name}`);
+
+            console.log(`✅ Found brand logo in bucket ${bucket}/${vendorIdStr}/${folder}:`, urlData.publicUrl);
+            return urlData.publicUrl;
+          }
+        } catch (bucketError) {
+          console.log(`Error checking bucket ${bucket}/${folder}:`, bucketError);
           continue;
         }
-
-        if (files && files.length > 0) {
-          // Get the most recent file
-          const logoFile = files[0];
-          const { data: urlData } = supabase.storage
-            .from(bucket)
-            .getPublicUrl(`${vendorIdStr}/brand_logo/${logoFile.name}`);
-
-          console.log(`✅ Found brand logo in bucket ${bucket}:`, urlData.publicUrl);
-          return urlData.publicUrl;
-        }
-      } catch (bucketError) {
-        console.log(`Error checking bucket ${bucket}:`, bucketError);
-        continue;
       }
     }
 

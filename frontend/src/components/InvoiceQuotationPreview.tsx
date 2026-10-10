@@ -26,10 +26,19 @@ const InvoiceQuotationPreview: React.FC<InvoiceQuotationPreviewProps> = ({
 
   useEffect(() => {
     const loadLogo = async () => {
+      // 1. Direct fields on vendor object
+      const directLogo = vendor?.brand_logo_url || vendor?.avatar_url || (vendor?.catalog_images_metadata && vendor.catalog_images_metadata[0]?.media_url);
+      if (directLogo) {
+        setLogoUrl(directLogo);
+      }
+
+      // 2. Fetch from storage if vendor_id exists
       if (vendor && vendor.vendor_id) {
         try {
           const logo = await getVendorBrandLogoFromStorage(vendor.vendor_id);
-          setLogoUrl(logo);
+          if (logo) {
+            setLogoUrl(logo);
+          }
         } catch (e) {
           console.error('Error loading logo in preview:', e);
         }
@@ -157,20 +166,34 @@ ${vendor.email ? `Email: ${vendor.email}` : ''}`;
             {/* Header */}
             <div className="border-b-2 border-gray-200 pb-6 mb-6">
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="min-w-0">
-                  <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
-                    {vendor.brand_name || 'Your Business Name'}
-                  </h1>
-                  {vendor.category && <p className="text-gray-600 mb-1 text-sm sm:text-base">{vendor.category}</p>}
-                  {vendor.address && <p className="text-gray-500 mb-1 text-xs sm:text-sm break-words">{vendor.address}</p>}
-                  {(vendor.phone_number || vendor.whatsapp_number) && (
-                    <p className="text-gray-500 mb-1 text-xs sm:text-sm">
-                      Phone: {vendor.phone_number || vendor.whatsapp_number}
-                    </p>
+                <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                  {logoUrl && (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border border-gray-200 bg-white p-1.5 flex-shrink-0 shadow-sm overflow-hidden flex items-center justify-center">
+                      <img 
+                        src={logoUrl} 
+                        alt={vendor.brand_name || "Brand Logo"} 
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
                   )}
-                  {vendor.email && <p className="text-gray-500 text-xs sm:text-sm break-all">Email: {vendor.email}</p>}
+                  <div className="min-w-0">
+                    <h1 className="text-xl sm:text-3xl font-bold text-gray-900 mb-2 break-words">
+                      {vendor.brand_name || 'Your Business Name'}
+                    </h1>
+                    {vendor.category && <p className="text-gray-600 mb-1 text-sm sm:text-base font-medium">{vendor.category}</p>}
+                    {vendor.address && <p className="text-gray-500 mb-1 text-xs sm:text-sm break-words">{vendor.address}</p>}
+                    {(vendor.phone_number || vendor.whatsapp_number) && (
+                      <p className="text-gray-500 mb-1 text-xs sm:text-sm">
+                        Phone: {vendor.phone_number || vendor.whatsapp_number}
+                      </p>
+                    )}
+                    {vendor.email && <p className="text-gray-500 text-xs sm:text-sm break-all">Email: {vendor.email}</p>}
+                  </div>
                 </div>
-                <div className="text-left sm:text-right w-full sm:w-auto">
+                <div className="text-left sm:text-right w-full sm:w-auto flex-shrink-0">
                   <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-4">
                     {invoiceQuotation.type === 'invoice' ? 'INVOICE' : 'QUOTATION'}
                   </h2>
@@ -282,22 +305,25 @@ ${vendor.email ? `Email: ${vendor.email}` : ''}`;
             {/* Footer */}
             <div className="border-t pt-6">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                {logoUrl ? (
-                  <>
+                {logoUrl && (
+                  <div className="flex items-center gap-3">
                     <img 
                       src={logoUrl} 
-                      alt="Brand Logo" 
-                      className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-lg border border-gray-200 bg-white"
+                      alt={vendor.brand_name || "Brand Logo"} 
+                      className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-lg border border-gray-200 bg-white p-1 shadow-sm"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
                     />
-                    <p className="font-semibold text-gray-700 text-center flex-1 sm:pr-16 text-xs sm:text-sm">
-                      Thank you for your business!
-                    </p>
-                  </>
-                ) : (
-                  <p className="font-semibold text-gray-700 text-center flex-1 text-xs sm:text-sm">
-                    Thank you for your business!
-                  </p>
+                    <div className="text-left hidden sm:block">
+                      <p className="text-xs font-bold text-gray-800">{vendor.brand_name}</p>
+                      <p className="text-[11px] text-gray-500">Authorized {invoiceQuotation.type === 'invoice' ? 'Invoice' : 'Quotation'}</p>
+                    </div>
+                  </div>
                 )}
+                <p className={`font-semibold text-gray-700 text-center flex-1 text-xs sm:text-sm ${logoUrl ? 'sm:pr-12' : ''}`}>
+                  Thank you for your business!
+                </p>
               </div>
             </div>
           </div>

@@ -55,6 +55,7 @@ import BusinessLanding from "./pages/BusinessLanding";
 import BusinessLogin from "./pages/BusinessLogin";
 import BusinessSignup from "./pages/BusinessSignup";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import EventSpaceProfile from "./pages/EventSpaceProfile";
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -201,6 +202,8 @@ const App = () => {
                 <Route path="/insta-edit-packages" element={<InstaEditPackages />} />
                 <Route path="/beautyvendor" element={<BeautyVendor />} />
                 <Route path="/vendors" element={<VendorsPage />} />
+                <Route path="/event-space-profile" element={<EventSpaceProfile />} />
+                <Route path="/event-space/:spaceId" element={<EventSpaceProfile />} />
                 <Route path="/smart-request" element={<SmartRequest />} />
                 <Route path="/voice-search" element={<SmartVoiceRequest />} />
                 <Route path="/contact" element={<Contact />} />

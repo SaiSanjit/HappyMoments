@@ -3,7 +3,7 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import { Vendor } from '@/lib/supabase';
 import { getVendorByFieldId, getVendorMedia, getHighlightedCatalogImages, getAllCatalogImages, getCustomerReviews } from '../services/supabaseService';
 import { getVendorBrandLogoFromStorage, getVendorContactPersonImageFromStorage } from '../services/supabaseStorageService';
-import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Calendar, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Info, Globe, Scroll, FileText, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, MapPin, Phone, Mail, Instagram, Facebook, Heart, Share2, Clock, CheckCircle, Camera, Video, Users, Award, MessageCircle, Zap, Trophy, Sparkles, ArrowRight, Play, Pause, Building2, Info, Globe, Scroll, FileText, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -228,7 +228,8 @@ const VendorProfile = () => {
         setCustomerReviews(reviewsData);
         // Reset logo error state when new logo is loaded
         setLogoError(false);
-        setBrandLogoUrl(brandLogo);
+        const resolvedLogo = brandLogo || vendorData?.brand_logo_url || vendorData?.avatar_url || (vendorData?.catalog_images_metadata?.[0]?.media_url) || null;
+        setBrandLogoUrl(resolvedLogo);
         setContactPersonImageUrl(contactPersonImage);
         
         // Reset slide index when images change
@@ -281,6 +282,27 @@ const VendorProfile = () => {
       return () => clearInterval(interval);
     }
   }, [isAutoPlaying, highlightedCatalogImages.length]);
+
+  // Memoize brand logo URL to prevent unnecessary re-renders with full fallbacks
+  const brandLogoSrc = useMemo(() => {
+    if (brandLogoUrl && !logoError) return brandLogoUrl;
+    if (vendor?.brand_logo_url) return vendor.brand_logo_url;
+    if (vendor?.avatar_url) return vendor.avatar_url;
+    if (vendor?.catalog_images_metadata && vendor.catalog_images_metadata.length > 0) {
+      return vendor.catalog_images_metadata[0]?.media_url;
+    }
+    return "/images/vendor.jpeg";
+  }, [brandLogoUrl, logoError, vendor]);
+
+  const handleBrandLogoError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+    if (!logoError) {
+      setLogoError(true);
+    }
+    if (img.src !== `${window.location.origin}/images/vendor.jpeg`) {
+      img.src = "/images/vendor.jpeg";
+    }
+  }, [logoError]);
 
   // Memoize contact person image URL to prevent unnecessary re-renders
   // MUST be called before any early returns to follow Rules of Hooks
@@ -481,8 +503,8 @@ const VendorProfile = () => {
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm lg:hidden mobile-menu-container">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Left side - Back button and Company name */}
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+            {/* Left side - Back button, Brand logo, and Company name */}
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <Button
                 variant="ghost"
                 size="sm"
@@ -492,6 +514,14 @@ const VendorProfile = () => {
               >
                 <ChevronLeft className="h-5 w-5 text-gray-700" />
               </Button>
+              <div className="w-8 h-8 rounded-full border border-orange-200 flex-shrink-0 overflow-hidden bg-white p-0.5 shadow-xs flex items-center justify-center">
+                <img 
+                  src={brandLogoSrc} 
+                  alt={vendor.brand_name || 'Vendor'}
+                  className="w-full h-full object-contain rounded-full"
+                  onError={handleBrandLogoError}
+                />
+              </div>
               <h1 className="text-base font-bold text-gray-900 truncate">{vendor.brand_name}</h1>
             </div>
 
@@ -576,18 +606,6 @@ const VendorProfile = () => {
                   Call Vendor
                 </Button>
 
-                {/* Visit Button */}
-                <Button
-                  onClick={() => {
-                    // Handle visit action
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full justify-start bg-purple-500 hover:bg-purple-600 text-white h-11"
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Schedule Visit
-                </Button>
-
                 {/* Share Button */}
                 <Button
                   onClick={async () => {
@@ -634,25 +652,13 @@ const VendorProfile = () => {
               >
                 <ChevronLeft className="h-5 w-5 text-gray-700" />
               </Button>
-              <div className="w-12 h-12 rounded-full border-2 border-blue-500 flex-shrink-0 overflow-hidden bg-white">
+              <div className="w-12 h-12 rounded-full border-2 border-orange-400 flex-shrink-0 overflow-hidden bg-white p-0.5 shadow-sm flex items-center justify-center">
                 <img 
-                  src={logoError || !brandLogoUrl ? "/images/vendor.jpeg" : brandLogoUrl} 
+                  src={brandLogoSrc} 
                   alt={vendor.brand_name || 'Vendor'}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain rounded-full"
                   loading="eager"
-                  onError={() => {
-                    if (!logoError) {
-                      setLogoError(true);
-                    }
-                  }}
-                  onLoad={(e) => {
-                    // Ensure smooth transition when image loads
-                    (e.target as HTMLImageElement).style.opacity = '1';
-                  }}
-                  style={{ 
-                    opacity: brandLogoUrl && !logoError ? 0 : 1,
-                    transition: 'opacity 0.3s ease-in-out'
-                  }}
+                  onError={handleBrandLogoError}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -690,8 +696,18 @@ const VendorProfile = () => {
           <div className="container mx-auto px-4 py-2">
             {/* Mobile Hero Card - Trust First, Conversion Focused */}
             <div className="bg-white rounded-2xl p-5 shadow-xl border border-orange-200 mb-4">
-              {/* Vendor Name */}
-              <h1 className="text-2xl font-bold text-gray-900 mb-3 text-center">{vendor.brand_name}</h1>
+              {/* Brand Logo & Name */}
+              <div className="flex flex-col items-center mb-3">
+                <div className="w-20 h-20 rounded-2xl border-2 border-orange-200 shadow-md bg-white p-1.5 mb-2.5 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  <img
+                    src={brandLogoSrc}
+                    alt={vendor.brand_name || 'Brand Logo'}
+                    className="w-full h-full object-contain rounded-xl"
+                    onError={handleBrandLogoError}
+                  />
+                </div>
+                <h1 className="text-2xl font-bold text-gray-900 text-center">{vendor.brand_name}</h1>
+              </div>
               
               {/* One-line Value Statement */}
               <div className="text-center mb-3">
@@ -724,6 +740,30 @@ const VendorProfile = () => {
                     </Badge>
                   )}
                 </div>
+
+              {/* Mobile Languages Display */}
+              {((vendor.languages && vendor.languages.length > 0) || 
+                (vendor.languages_spoken && vendor.languages_spoken.length > 0) || 
+                (vendor.additional_info?.languages && Array.isArray(vendor.additional_info.languages) && vendor.additional_info.languages.length > 0)) && (
+                <div className="flex items-center justify-center gap-2 flex-wrap mb-4">
+                  <span className="text-xs font-semibold text-gray-600">Communicates in:</span>
+                  <div className="flex flex-wrap gap-1.5 justify-center">
+                    {(vendor.languages && vendor.languages.length > 0
+                      ? vendor.languages
+                      : (vendor.languages_spoken && vendor.languages_spoken.length > 0
+                        ? vendor.languages_spoken
+                        : (vendor.additional_info?.languages || []))
+                    ).map((language: string, index: number) => (
+                      <span 
+                        key={index} 
+                        className="px-2.5 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium border border-orange-200"
+                      >
+                        {language}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Trust Info - Rating + Experience */}
               <div className="flex items-center justify-center gap-4 mb-4 pb-4 border-b border-gray-200">
@@ -1333,16 +1373,55 @@ const VendorProfile = () => {
                   <div className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-2xl border-2 border-amber-200/50 w-full h-full flex flex-col">
                     
                     {/* Name and Profile Row */}
-                    <div className="flex items-start mb-4 relative">
-                      <div className="flex-1 pr-8">
-                        <h1 className="text-5xl lg:text-6xl font-black text-gray-900 leading-tight tracking-tight">
-                          {vendor.brand_name}
-            </h1>
+                    <div className="flex items-start mb-8 relative">
+                      <div className="flex-1 pr-8 flex flex-col items-start gap-4">
+                        <div className="flex items-center gap-4 flex-wrap sm:flex-nowrap">
+                          {/* Brand Logo */}
+                          <div className="w-20 h-20 rounded-2xl border-2 border-orange-200/80 shadow-md bg-white p-1.5 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                            <img
+                              src={brandLogoSrc}
+                              alt={vendor.brand_name || 'Brand Logo'}
+                              className="w-full h-full object-contain rounded-xl"
+                              onError={handleBrandLogoError}
+                            />
+                          </div>
+                          <h1 className="text-5xl lg:text-6xl font-black text-gray-900 leading-tight tracking-tight">
+                            {vendor.brand_name}
+                          </h1>
+                        </div>
+
+                        {/* Category Badges Row - Clean layout for multiple categories */}
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          {/* Display categories - show first 3, then "+X more" if more exist */}
+                          {vendorCategories.length > 0 && (
+                            <>
+                              {vendorCategories.slice(0, 3).map((cat, idx) => (
+                                <Badge key={idx} className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                                  <CategoryIcon className="w-4 h-4" />
+                                  {cat}
+                                </Badge>
+                              ))}
+                              {vendorCategories.length > 3 && (
+                                <Badge className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4" />
+                                  +{vendorCategories.length - 3} more
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                          {vendorCategories.length === 0 && (
+                            <Badge className="px-5 py-2.5 text-sm font-semibold bg-gray-500 text-white rounded-xl shadow-md flex items-center gap-2">
+                              <CategoryIcon className="w-4 h-4" />
+                              Service Provider
+                            </Badge>
+                          )}
+                        </div>
+
                         {/* Languages Display - Desktop Hero */}
                         {((vendor.languages && vendor.languages.length > 0) || 
                           (vendor.languages_spoken && vendor.languages_spoken.length > 0) || 
                           (vendor.additional_info?.languages && Array.isArray(vendor.additional_info.languages) && vendor.additional_info.languages.length > 0)) && (
-                          <div className="mt-3 flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2.5 flex-wrap">
                             <span className="text-base font-semibold text-gray-600">Communicates in:</span>
                             <div className="flex flex-wrap gap-2">
                               {(vendor.languages && vendor.languages.length > 0
@@ -1353,7 +1432,7 @@ const VendorProfile = () => {
                               ).map((language: string, index: number) => (
                                 <span 
                                   key={index} 
-                                  className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium border border-orange-200"
+                                  className="px-3.5 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium border border-orange-200 shadow-xs"
                                 >
                                   {language}
                                 </span>
@@ -1382,34 +1461,6 @@ const VendorProfile = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
-
-
-                    {/* Category Badges Row - Clean layout for multiple categories */}
-                    <div className="flex flex-wrap items-center gap-3 mb-10 -mt-10">
-                      {/* Display categories - show first 3, then "+X more" if more exist */}
-                      {vendorCategories.length > 0 && (
-                        <>
-                          {vendorCategories.slice(0, 3).map((cat, idx) => (
-                            <Badge key={idx} className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                              <CategoryIcon className="w-4 h-4" />
-                              {cat}
-                            </Badge>
-                          ))}
-                          {vendorCategories.length > 3 && (
-                            <Badge className="px-5 py-2.5 text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              +{vendorCategories.length - 3} more
-                            </Badge>
-                          )}
-                        </>
-                      )}
-                      {vendorCategories.length === 0 && (
-                        <Badge className="px-5 py-2.5 text-sm font-semibold bg-gray-500 text-white rounded-xl shadow-md flex items-center gap-2">
-                          <CategoryIcon className="w-4 h-4" />
-                          Service Provider
-                        </Badge>
-                      )}
                     </div>
 
                     {/* Tagline */}

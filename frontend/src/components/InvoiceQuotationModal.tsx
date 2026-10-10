@@ -33,7 +33,7 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
     services: [] as ServiceItem[],
     terms: '',
     template_id: 'template-1',
-    tax_rate: 18,
+    tax_rate: 0,
     discount_rate: 10,
     coupon_name: 'VENDOR COUPON'
   });
@@ -77,7 +77,7 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         services: editData.services || [],
         terms: editData.terms || '',
         template_id: editData.template_id || 'template-1',
-        tax_rate: editData.tax_rate || 18,
+        tax_rate: editData.tax_rate ?? 0,
         discount_rate: editData.discount_rate || 0,
         coupon_name: editData.coupon_name || ''
       });
@@ -101,7 +101,7 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
           ? 'Payment is due within 30 days of invoice date. Late payments may incur additional charges.'
           : 'This quotation is valid for 30 days from the date of issue. Prices are subject to change without notice.',
         template_id: 'template-1',
-        tax_rate: 18,
+        tax_rate: 0,
         discount_rate: 10,
         coupon_name: 'VENDOR COUPON'
       });
@@ -183,7 +183,7 @@ const InvoiceQuotationModal: React.FC<InvoiceQuotationModalProps> = ({
         ? 'Payment is due within 30 days of invoice date. Late payments may incur additional charges. All services include post-processing and delivery within 30 days.'
         : 'This quotation is valid for 30 days from the date of issue. Prices are subject to change without notice. Advance payment of 50% required to confirm booking.',
       template_id: 'template-1',
-      tax_rate: 18,
+      tax_rate: 0,
       discount_rate: 10,
       coupon_name: 'VENDOR COUPON'
     });

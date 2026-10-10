@@ -39,13 +39,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
-import { getLoggedInVendor, vendorLogout, getVendorPendingChanges, getVendorRejectedChanges, getVendorNotifications, getVendorLeads, getVendorLeadStats, updateLeadStatus, deleteVendorLead, updateVendorLead, getVendorEvents, createVendorEvent, updateVendorEvent, deleteVendorEvent, getVendorCalendarStats, refreshVendorSession, markAllNotificationsAsRead } from '../services/supabaseService';
+import { getLoggedInVendor, vendorLogout, getVendorPendingChanges, getVendorRejectedChanges, getVendorNotifications, getVendorLeads, getVendorLeadStats, updateLeadStatus, deleteVendorLead, updateVendorLead, refreshVendorSession, markAllNotificationsAsRead } from '../services/supabaseService';
 import { getVendorCustomers, updateVendorStatusForContact, updateNotesForContact, flagCustomer, unflagCustomer } from '../services/contactedVendorsApiService';
 import { Vendor } from '../lib/supabase';
 import AddLeadModal from '../components/AddLeadModal';
 import CustomerDetailsModal from '../components/CustomerDetailsModal';
 import DealPriceModal from '../components/DealPriceModal';
-import VendorCalendar from '../components/VendorCalendar';
 import InvoiceQuotationList from '../components/InvoiceQuotationList';
 import InvoiceQuotationModal from '../components/InvoiceQuotationModal';
 import InvoiceQuotationPreview from '../components/InvoiceQuotationPreview';
@@ -93,8 +92,6 @@ const VendorDashboard: React.FC = () => {
     lastContactedRange: { start: '', end: '' },
     quickDateFilter: '' // Today, This Week, This Month, etc.
   });
-  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
-  const [calendarStats, setCalendarStats] = useState<any>({});
   
   // Customers states
   const [customers, setCustomers] = useState<any[]>([]);
@@ -385,7 +382,6 @@ const VendorDashboard: React.FC = () => {
         loadRejectedChanges(parseInt(vendorToUse.vendor_id));
         loadNotifications(parseInt(vendorToUse.vendor_id));
         loadLeadsData(parseInt(vendorToUse.vendor_id));
-        loadCalendarData(parseInt(vendorToUse.vendor_id));
         loadCustomersData(parseInt(vendorToUse.vendor_id));
     setLoading(false);
     } catch (err) {
@@ -467,19 +463,6 @@ const VendorDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading leads data:', error);
-    }
-  };
-
-  const loadCalendarData = async (vendorId: number) => {
-    try {
-      const [eventsData, calendarStatsData] = await Promise.all([
-        getVendorEvents(vendorId),
-        getVendorCalendarStats(vendorId)
-      ]);
-      setCalendarEvents(eventsData);
-      setCalendarStats(calendarStatsData || {});
-    } catch (error) {
-      console.error('Error loading calendar data:', error);
     }
   };
 
@@ -873,46 +856,6 @@ const VendorDashboard: React.FC = () => {
   const handleCancelEditingNotes = () => {
     setEditingNotes(null);
     setNotesValue('');
-  };
-
-  // Calendar event handlers
-  const handleEventCreate = async (eventData: any) => {
-    const result = await createVendorEvent(eventData);
-    if (result.success) {
-      if (vendor) {
-        await loadCalendarData(parseInt(vendor.vendor_id));
-      }
-    } else {
-      alert(result.error || 'Failed to create event');
-    }
-  };
-
-  const handleEventUpdate = async (eventId: number, eventData: any) => {
-    const result = await updateVendorEvent(eventId, eventData);
-    if (result.success) {
-      if (vendor) {
-        await loadCalendarData(parseInt(vendor.vendor_id));
-      }
-    } else {
-      alert(result.error || 'Failed to update event');
-    }
-  };
-
-  const handleEventDelete = async (eventId: number) => {
-    const result = await deleteVendorEvent(eventId);
-    if (result.success) {
-      if (vendor) {
-        await loadCalendarData(parseInt(vendor.vendor_id));
-      }
-    } else {
-      alert(result.error || 'Failed to delete event');
-    }
-  };
-
-  const handleCalendarRefresh = async () => {
-    if (vendor) {
-      await loadCalendarData(parseInt(vendor.vendor_id));
-    }
   };
 
   // Invoice/Quotation handlers
@@ -1431,12 +1374,6 @@ const VendorDashboard: React.FC = () => {
               label: 'EXTERNAL LEADS', 
               mobileLabel: 'External Leads',
               icon: MessageSquare
-            },
-            { 
-              id: 'calendar', 
-              label: 'CALENDAR', 
-              mobileLabel: 'Calendar',
-              icon: Calendar
             },
           ].map((tab, index) => (
                 <button
@@ -2593,48 +2530,7 @@ const VendorDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Calendar Tab */}
-        {activeTab === 'calendar' && (
-          <div className="space-y-6">
-            {/* Calendar Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-[#001B5E]">{calendarStats.total_events || 0}</p>
-                  <p className="text-sm text-gray-600">Total Events</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-green-600">{calendarStats.confirmed_bookings || 0}</p>
-                  <p className="text-sm text-gray-600">Confirmed</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-yellow-600">{calendarStats.tentative_bookings || 0}</p>
-                  <p className="text-sm text-gray-600">Tentative</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-red-600">{calendarStats.blocked_days || 0}</p>
-                  <p className="text-sm text-gray-600">Blocked Days</p>
-                </CardContent>
-              </Card>
-            </div>
 
-            {/* Calendar Component */}
-            <VendorCalendar
-              vendorId={parseInt(vendor.vendor_id)}
-              events={calendarEvents}
-              onEventCreate={handleEventCreate}
-              onEventUpdate={handleEventUpdate}
-              onEventDelete={handleEventDelete}
-              onEventsRefresh={handleCalendarRefresh}
-            />
-          </div>
-        )}
 
 
         {/* Invoices Tab */}
