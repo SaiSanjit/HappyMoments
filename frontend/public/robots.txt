@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /vendor-dashboard
+Disallow: /vendor-profile-edit
+Disallow: /customer-dashboard
+Disallow: /customer-profile
+Disallow: /test
+
+Sitemap: https://happymomentsindia.com/sitemap.xml
