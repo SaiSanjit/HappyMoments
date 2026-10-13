@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Menu, X, ChevronDown, User, Lock, LogIn, AlertCircle, Heart, Users, Bell, LogOut, Headphones, Utensils, Eye, EyeOff, Loader2, CheckCircle, Mail, Building2, PhoneCall, Phone, MessageCircle } from "lucide-react";
+import { Menu, X, ChevronDown, User, Lock, LogIn, AlertCircle, Heart, Users, Bell, LogOut, Headphones, Utensils, Eye, EyeOff, Loader2, CheckCircle, Mail, Building2, PhoneCall, Phone, MessageCircle, PlayCircle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserStore } from "@/store/userStore";
 import { useCustomerAuth } from "@/contexts/CustomerAuthContext";
@@ -1035,6 +1035,23 @@ const Header = () => {
                     </form>
                   </>
                 )}
+
+                <div className="pt-3 border-t border-gray-100 flex flex-col items-center gap-1.5 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLoginModal(false);
+                      navigate('/vendor-tutorial');
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline transition-colors group"
+                  >
+                    <PlayCircle className="w-4 h-4 text-orange-500 group-hover:scale-110 transition-transform" />
+                    First time or need help? Check Tutorial
+                  </button>
+                  <span className="text-[11px] text-gray-500">
+                    Watch our step-by-step video guide to get started
+                  </span>
+                </div>
               </div>
             )}
           </div>

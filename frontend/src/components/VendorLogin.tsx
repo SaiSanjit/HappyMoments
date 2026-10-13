@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { User, Lock, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, LogIn, AlertCircle, Eye, EyeOff, PlayCircle } from 'lucide-react';
 import { vendorLogin, saveVendorSession, sendVendorResetCode, resetVendorPasswordWithCode } from '../services/supabaseService';
 
 interface VendorLoginProps {
@@ -392,6 +392,23 @@ const VendorLogin: React.FC<VendorLoginProps> = ({ onClose }) => {
             </Button>
           </form>
         )}
+
+        <div className="mt-5 pt-4 border-t border-gray-100 flex flex-col items-center gap-1.5 text-center">
+          <button
+            type="button"
+            onClick={() => {
+              if (onClose) onClose();
+              navigate('/vendor-tutorial');
+            }}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors group"
+          >
+            <PlayCircle className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+            Check Tutorial
+          </button>
+          <span className="text-xs text-gray-500">
+            Watch our step-by-step video guide to get started
+          </span>
+        </div>
       </CardContent>
     </Card>
   );

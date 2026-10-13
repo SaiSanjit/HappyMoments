@@ -48,14 +48,18 @@ import EmailChangeVerification from "./pages/EmailChangeVerification";
 import LikedVendors from "./pages/LikedVendors";
 import MyVendors from "./pages/MyVendors";
 import Contact from "./pages/Contact";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DeleteAccount from "./pages/DeleteAccount";
 import ComingSoon from "./pages/ComingSoon";
 import VendorLogin from "./components/VendorLogin";
+import VendorTutorial from "./pages/VendorTutorial";
 import { BusinessAuthProvider } from "./contexts/BusinessAuthContext";
 import BusinessLanding from "./pages/BusinessLanding";
 import BusinessLogin from "./pages/BusinessLogin";
 import BusinessSignup from "./pages/BusinessSignup";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import EventSpaceProfile from "./pages/EventSpaceProfile";
+import { MobileAppHandler } from "./components/MobileAppHandler";
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -75,6 +79,7 @@ const App = () => {
                   v7_relativeSplatPath: true,
                 }}
               >
+              <MobileAppHandler />
               <Routes>
                 <Route path="/" element={<Index />} />
                 
@@ -120,6 +125,10 @@ const App = () => {
                       <VendorLogin />
                     </div>
                   } 
+                />
+                <Route 
+                  path="/vendor-tutorial" 
+                  element={<VendorTutorial />} 
                 />
                 <Route 
                   path="/verify-email" 
@@ -207,6 +216,10 @@ const App = () => {
                 <Route path="/smart-request" element={<SmartRequest />} />
                 <Route path="/voice-search" element={<SmartVoiceRequest />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/delete-account" element={<DeleteAccount />} />
+                <Route path="/delete-account.html" element={<DeleteAccount />} />
                 <Route path="/coming-soon" element={<ComingSoon />} />
                 
                 {/* Redirect blog pages to home for now */}

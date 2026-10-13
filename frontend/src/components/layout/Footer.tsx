@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, Mail, Phone, Youtube, Linkedin } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Mail, Phone, Youtube, Linkedin, PlayCircle } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -97,6 +97,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/delete-account" className="text-white/80 hover:text-wedding-orange transition-custom">
+                  Delete Account
+                </Link>
+              </li>
+              <li>
                 <Link to="/terms" className="text-white/80 hover:text-wedding-orange transition-custom">
                   Terms & Conditions
                 </Link>
@@ -126,6 +131,12 @@ const Footer = () => {
               <li>
                 <Link to="/vendor-login" className="text-white/80 hover:text-wedding-orange transition-custom">
                   Vendor Login
+                </Link>
+              </li>
+              <li>
+                <Link to="/vendor-tutorial" className="text-white/80 hover:text-wedding-orange transition-custom inline-flex items-center gap-1.5">
+                  <PlayCircle className="w-3.5 h-3.5 text-wedding-orange" />
+                  Vendor Tutorial
                 </Link>
               </li>
             </ul>
